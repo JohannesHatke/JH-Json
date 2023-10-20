@@ -1,11 +1,14 @@
-./build/main:build ./build/main.o ./build/utf8.o
-	cc -pedantic -g -Wall -o ./build/main ./build/main.o
+CFLAGS= -Wall -Wextra -pedantic  -g
+./build/main:build ./build/main.o ./build/utf8.o ./build/ArrayList.o
+	$(CC) $(CFLAGS)  ./build/ArrayList.o ./build/main.o -o ./build/main
 ./build: 
 	mkdir build
 ./build/main.o: ./build main.c
-	cc -pedantic -g -Wall -c -o ./build/main.o main.c
+	$(CC) $(CFLAGS) -c -o ./build/main.o main.c
 ./build/utf8.o: ./build ./UTF8/utf8.c
 	# no warnings because overflow is intended
-	cc  -g -c -o ./build/utf8.o ./UTF8/utf8.c
+	$(CC) -g -c -o ./build/utf8.o ./UTF8/utf8.c
+./build/ArrayList.o: ./ArrayList/ArrayList.c
+	$(CC) $(CFLAGS) -c ./ArrayList/ArrayList.c -o ./build/ArrayList.o 
 clean: 
 	rm -r ./build

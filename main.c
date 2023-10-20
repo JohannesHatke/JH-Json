@@ -2,12 +2,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include "ArrayList/ArrayList.h"
 
 #define MAX_SAFE_STR 100
 
 // error handling
 
-int line;
+int line = 1;
 void die(){
 	//do some cleanup
 	fprintf(stderr,"quit, error occured on line: %d\n",line);
@@ -155,7 +156,7 @@ void *derefer(json_val *to_dereference, int *intval, int *boolval){
 			*intval = *((int*) to_dereference->data);
 			return to_dereference->data;
 		break;
-		case JSON_LIT:
+		case JSON_LITERAL:
 			if (*((int*) to_dereference->data) == JSON_NULL)
 				*boolval = JSON_NULL;
 			if (*((int*) to_dereference->data) == JSON_FALSE)
@@ -165,6 +166,17 @@ void *derefer(json_val *to_dereference, int *intval, int *boolval){
 		break;
 	}
 	return NULL;
+}
+
+/*
+ * wrapper for getchar
+ */
+int readchar(FILE *stream){
+	int c;
+	while(isspace(c = fgetc(stream)))
+		if(c == '\n')
+			line++;
+	return c;
 }
 
 int skipwhitespace(FILE *stream){
@@ -182,51 +194,113 @@ int skipwhitespace(FILE *stream){
 	return count;
 }
 
-typedef struct node{
-	json_val *val;
-	struct node *next;
-}node;
+/*
+ * only works for Char, num, str, and literals
+ */
+void json_val_free(json_val *p){
+	switch( p->type){
+		case JSON_NUM:
+			free( (int*) p->data);
+		break;
+		case JSON_STR:
+		case JSON_CHAR:
+			free( (char*) p->data);
+		break;
+		case JSON_LITERAL:
+			free( (char*) p->data);
+		break;
+		default:
+			fprintf(stderr,"trying to free an unsupported json value of type %d\n",p->type);
+			die();
+		break;
+	}
+	free(p);
+}
+void AL_free_wrapper(void *p, int pos){
+	json_val_free((json_val*) p);
+}
 
 
-// TODO write a working list too tired, with append and all or just use the one i already wrote
 json_val *parse_Val(FILE *stream);
 json_val *parse_Array(FILE *stream){
 	//first character i get is always [
 	int c;
-	node *curr,*old;
-	if (( c = fgetc(stream)) != '['){
+	if (( c = readchar(stream)) != '['){
 		fprintf(stderr,"parse_Array failed\n");
+		die();
 	}
 	json_val *output = malloc(sizeof(json_val));
 	output->type = JSON_LIST;
-	output->data = NULL;
-	skipwhitespace(stream);
-	if ((c = fgetc(stream))== ']')
-		return output;
+	output->data = AL_init(1);
+	
+	json_val *tmp;
+	while ((c = readchar(stream))!= ']' && c != EOF){
+		ungetc(c,stream);
+		if ( (tmp = parse_Val(stream)) == NULL ){
+			AL_foreach(output->data, &AL_free_wrapper );
+			AL_free(output->data);
+			free(output);
+			fprintf(stderr,"failed on %d\n",c);
+			die();
+		}
+		AL_append(output->data,(void*) tmp);
 
-	ungetc(c, stream);
-	output->data = malloc(sizeof(node));
-	old = (node*) output->data;
-	while ((c = fgetc(stream))!= ']'){
-		old = curr;
-		curr->next = NULL;
-		curr->val = parse_Val(stream);
+		if (( c = readchar(stream)  != ','))
+			ungetc(c,stream);
 	}
-
-
-
+	return output;
 }
 
 json_val *parse_Object(FILE *stream);
 json_val *parse_Array(FILE *stream);
 json_val *parse_String(FILE *stream);
-json_val *parse_Num(FILE *stream);
 json_val *parse_Lit(FILE *stream);
+
+json_val *parse_Object(FILE *stream){return NULL;}
+json_val *parse_String(FILE *stream){return NULL;}
+json_val *parse_Lit(FILE *stream){return NULL;}
+
+json_val *parse_Num(FILE *stream){
+	int c;
+	float val;
+	int sign = 1;
+
+	if ((c = getc(stream)) == '-'){
+		sign = -1;
+	} else {
+		ungetc(c, stream);
+	}
+
+	if ((c = getc(stream)) == '0'){
+		if (isdigit((c = getc(stream)))){
+			fprintf(stderr,"number cant start with leading 0\n");
+			return NULL;
+		}else{
+			val = 0;
+			ungetc(c,stream);
+		}
+			
+	} else {
+		ungetc(c, stream);
+	}
+
+	if (fscanf(stream,"%f",&val) != 1 && val != 0){
+		fprintf(stderr,"error reading number\n");
+		return NULL;
+	}
+
+	json_val *output = malloc(sizeof(json_val));
+	float *output_data = (float*) malloc(sizeof(float));
+	*output_data = sign * val;
+	output->type = JSON_NUM;
+	output->data = (void*) output_data;
+	return output;
+}
 
 json_val *parse_Val(FILE *stream){
 	int c;
-	if ((c = fgetc(stream)) == EOF){
-		die();
+	json_val *output = NULL;
+	if ((c = readchar(stream)) == EOF){
 		return NULL;
 	}
 	ungetc(c,stream);
@@ -242,12 +316,25 @@ json_val *parse_Val(FILE *stream){
 		break;
 	}
 
-	if ( strchr("-123456789",c) != NULL){
+	if ( strchr("-0123456789",c) != NULL){
 		return parse_Num(stream);
 	} else {
 		return parse_Lit(stream);
 	}
+}
 
+/*
+ *  try parsing. 
+ *  On failure it will cleanup all allocated memory and exit program
+*/
+json_val *parse_Start(FILE *stream){
+	json_val *output;
+	if ((output = parse_Val(stream)) != NULL){
+		return output;
+	}
+	fprintf(stderr,"Failed parsing json\n\n");
+	die();
+	return NULL;
 }
 
 
@@ -266,6 +353,18 @@ int main(void){
 	printf("lookup results in %p\n", lookup(tab1,n2)->val);
 
 	free_hash_table(tab1);
+
+	//json_val *retval = parse_Num(stdin);
+	FILE *testjson = fopen("1test.json","r");
+	json_val *retval = parse_Start(testjson);
+	ArrayList *list = (ArrayList*) retval->data;
+	printf("Type: %d\n",retval->type);
+	printf("list: %p\n",list);
+	printf("len: %d\n",list->len);
+	for (int i = 0; i< list->len; i++){
+		printf("[%d] = %d\n",i,*((int*) AL_get(list,i)));
+	}
+	//printf("read %f\n",*((float*) retval->data));
 
 
 
