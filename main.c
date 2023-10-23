@@ -3,6 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "ArrayList/ArrayList.h"
+#include "UTF8/utf8.h"
 
 #define MAX_SAFE_STR 100
 #define MAXLINE 1000
@@ -248,8 +249,17 @@ enum TOKENS {
 	NEWLINE
 };
 
+void json_val_free(json_val *p);
+
+void AL_free_wrapper(void *p, int pos){
+	json_val_free((json_val*) p);
+}
+
 void json_val_free(json_val *p){
 	switch( p->type){
+		case JSON_LIST:
+			AL_foreach((ArrayList*) p->data, &AL_free_wrapper);
+		break;
 		case JSON_NUM:
 			free( (int*) p->data);
 		break;
@@ -267,14 +277,20 @@ void json_val_free(json_val *p){
 	}
 	free(p);
 }
-void AL_free_wrapper(void *p, int pos){
-	json_val_free((json_val*) p);
-}
 
 json_val *parse_val(char **after);
 json_val *parse_object(char **after);
 
 json_val *parse_object(char **after){return NULL;}
+
+
+/*
+* skip whitespace
+*/
+void skipwhitespace( char **p){
+	while( isspace(**p))
+		(*p)++;
+}
 
 /*
 * starts immediately after [
@@ -283,31 +299,29 @@ json_val *parse_list(char **after){
 	if( **after == '\n'){
 		after++;
 	}
+	#define skipline(c) if (**after == c && *((*after)+1) != '\0') (*after)++
 	json_val *output = NULL;
 	json_val *tmp = NULL;
 	int failed = 0;
 	ArrayList *al = AL_init(10);
-	// TODO: fix it so that [,val,] and stuff like that is not possible
+	int i = 0;
 	while ( **after != ']'){
-		if (**after == '\n')
-			(*after)++;
-		if (**after == ',')
-			(*after)++;
-		if (**after == '\n')
-			(*after)++;
+		skipwhitespace(after);
+		if (**after != ',' && i != 0){
+			printf("comma failure");
+			return NULL;
+		}
+		skipwhitespace(after);
+		skipline(',');
+		skipwhitespace(after);
 
 		tmp = parse_val(after);
 		if (tmp == NULL){
 			failed = 1;
 			break;
 		}
-		if (**after == '\n')
-			(*after)++;
-		if (**after == ',')
-			(*after)++;
-		if (**after == '\n')
-			(*after)++;
 		AL_append(al,tmp);
+		i++;
 	}
 
 	if (failed == 1){
@@ -315,6 +329,7 @@ json_val *parse_list(char **after){
 		AL_free(al);
 		return NULL;
 	}
+	(*after)++; // skipping ]
 	output = malloc(sizeof(json_val));
 	output->data = (void*) al;
 	output->type = JSON_LIST;
@@ -381,30 +396,38 @@ json_val *parse_num(char **after){
 }
 
 json_val *parse_val(char **after){
-	if (**after == '\n'){
-		after++;
-	}
+	skipwhitespace(after);
+	json_val *output = NULL;
 	switch(**after){
 		case '[':
 			(*after)++;
-			return parse_list(after);
+			output = parse_list(after);
 		break;
 		case '{':
 			(*after)++;
-			return parse_object(after);
+			output = parse_object(after);
 		break;
 	}
+	if (output){
+		skipwhitespace(after);
+	}
 
-	if (strchr("-0123456789",**after) != NULL)
+	if (!output && strchr("-0123456789",**after) != NULL)
 		return parse_num(after);
-	return NULL;
+
+	printf("after parsing value is remaining :%s:\n",*after);
+	return output;
 }
 
 
 json_val *parse_json_str(char *s){
 	char **offset = malloc(sizeof(char*));
 	*offset = s;
-	return parse_val(offset);
+	json_val *output;
+	if ((output = parse_val(offset)) == NULL){
+		printf("died at %s\n",*offset);
+	}
+	return output;
 }
 
 
@@ -420,9 +443,8 @@ json_val *parse_json_file(char *filename){
 	}
 
 	sbuf *sb = sbuf_init();
-	// doesnt work because this would allow [] [] 
 	while ( fgets(line, MAXLINE, input) != NULL){
-		remove_whitespace(line);
+		//remove_whitespace(line);
 		if (line_is_empty(line))
 			continue;
 		sbuf_append(sb, line);
@@ -431,16 +453,17 @@ json_val *parse_json_file(char *filename){
 	printf("%s",sb->str);
 
 	printf("begin parsing\n");
-	return parse_json_str(sb->str);
+	output = parse_json_str(sb->str);
 	sbuf_free(sb);
 	free(line);
 	fclose(input);
-	return NULL;
+	return output;
 }
 void print_entry(void *p, int pos){
 	printf("%f\n",*((float*) ((json_val*) p)->data));
 }
 
+//TODO implement methods to free memory properly
 int main(int argc, char **argv){
 
 
@@ -453,6 +476,7 @@ int main(int argc, char **argv){
 	printf("%p\n",test);
 	ArrayList *testList = test->data;
 	AL_foreach(testList, &print_entry);
+	json_val_free(test);
 
 
 
