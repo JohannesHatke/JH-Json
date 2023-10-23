@@ -259,6 +259,7 @@ void json_val_free(json_val *p){
 	switch( p->type){
 		case JSON_LIST:
 			AL_foreach((ArrayList*) p->data, &AL_free_wrapper);
+			AL_free((ArrayList*) p->data);
 		break;
 		case JSON_NUM:
 			free( (int*) p->data);
@@ -427,6 +428,7 @@ json_val *parse_json_str(char *s){
 	if ((output = parse_val(offset)) == NULL){
 		printf("died at %s\n",*offset);
 	}
+	free(offset);
 	return output;
 }
 
