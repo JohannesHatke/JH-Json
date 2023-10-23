@@ -297,9 +297,6 @@ void skipwhitespace( char **p){
 * starts immediately after [
 */
 json_val *parse_list(char **after){
-	if( **after == '\n'){
-		after++;
-	}
 	#define skipline(c) if (**after == c && *((*after)+1) != '\0') (*after)++
 	json_val *output = NULL;
 	json_val *tmp = NULL;
@@ -325,8 +322,9 @@ json_val *parse_list(char **after){
 		i++;
 	}
 
-	if (failed == 1){
+	if (failed){
 		//TODO free arraylist properly using foreach
+		AL_foreach(al, &AL_free_wrapper);
 		AL_free(al);
 		return NULL;
 	}
@@ -396,6 +394,70 @@ json_val *parse_num(char **after){
 	return output;
 }
 
+/*
+* starts inside string already
+*/
+json_val *parse_str(char **p){
+	printf("string enter\n");
+	printf("%s",*p);
+	int c,escaped = 0;
+	sbuf *s = sbuf_init();
+	char storage[2];
+	json_val *output;
+	storage[1] = '\0';
+	while( (c = (**p) ) != '\0' && !(c == '"' && !escaped)){
+		(*p)++;
+		if(!escaped &&  c == '\\'){
+			escaped = 1;
+			continue;
+		}
+		// TODO fix escaped characters not being recognised
+		if (escaped) {
+			escaped = 0;
+			switch(c){
+				case '"':
+					sbuf_append(s, "\"");
+				break;
+				case '\\':
+					sbuf_append(s, "\\");
+				break;
+				case '/':
+					sbuf_append(s, "/");
+				break;
+				case 'b':
+				       sbuf_append(s, "\b");
+				break;
+				case 'f':
+				       sbuf_append(s, "\f");
+				break;
+				case 'n':
+				       sbuf_append(s, "\n");
+				break;
+				case 'r':
+				       sbuf_append(s, "\r");
+				break;
+				case 't':
+					sbuf_append(s, "\t");
+				break;
+				case 'u':
+					//TODO Unicode
+				break;
+				default:
+					//TODO write error (for now just skipping
+				break;
+			}
+		} else {
+			storage[0] = c;
+			sbuf_append(s, storage);
+		}
+	}
+	(*p)++;
+	output = malloc(sizeof(json_val));
+	output->type = JSON_STR;
+	output->data = s->str;
+	free(s);
+	return output;
+}
 json_val *parse_val(char **after){
 	skipwhitespace(after);
 	json_val *output = NULL;
@@ -407,6 +469,10 @@ json_val *parse_val(char **after){
 		case '{':
 			(*after)++;
 			output = parse_object(after);
+		break;
+		case '"':
+			(*after)++;
+			output = parse_str(after);
 		break;
 	}
 	if (output){
@@ -462,10 +528,17 @@ json_val *parse_json_file(char *filename){
 	return output;
 }
 void print_entry(void *p, int pos){
-	printf("%f\n",*((float*) ((json_val*) p)->data));
+	json_val *jv = (json_val*) p;
+	switch(jv->type){
+		case JSON_STR:
+			printf("%s\n",((char*) jv->data));
+		break;
+		case JSON_NUM:
+			printf("%f\n",*((float*) jv->data));
+		break;
+	}
 }
 
-//TODO implement methods to free memory properly
 int main(int argc, char **argv){
 
 
@@ -479,8 +552,6 @@ int main(int argc, char **argv){
 	ArrayList *testList = test->data;
 	AL_foreach(testList, &print_entry);
 	json_val_free(test);
-
-
 
 	return 0;
 }
