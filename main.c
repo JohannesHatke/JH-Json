@@ -5,13 +5,13 @@
 #include "ArrayList/ArrayList.h"
 
 #define MAX_SAFE_STR 100
+#define MAXLINE 1000
 
 // error handling
 
-int line = 1;
 void die(){
 	//do some cleanup
-	fprintf(stderr,"quit, error occured on line: %d\n",line);
+	printf("depreceated die() method\n");
 	exit(1);
 }
 
@@ -116,21 +116,87 @@ hash_obj *install (hash_obj **table, char *name, void *val){
 	return curr->next;
 }
 
+
+// JSON PART
+
+//input handling
+
+#define line_is_empty(s) (strncmp(s,"\n",MAXLINE) == 0)
+
+#define SBUF_INCREASE 100
+typedef struct sbuf {
+	char *str;
+	int allocated;
+}
+sbuf;
+void sbuf_free(sbuf *sb){
+	free(sb->str);
+	free(sb);
+}
+
+sbuf *sbuf_init(){
+	sbuf *output = (sbuf*) malloc(sizeof(sbuf));
+	output->str = (char*) malloc(SBUF_INCREASE);
+	*(output->str) = '\0';
+	output->allocated = SBUF_INCREASE;
+	return output;
+}
+void sbuf_append(sbuf *buf, char *p){
+	int newsize = strlen(p) + strlen(buf->str)+1;
+	char *tmp;
+	if (newsize > buf->allocated){
+		buf->allocated = ((newsize / SBUF_INCREASE) + 1 )*SBUF_INCREASE;
+		tmp = malloc(buf->allocated);
+		strncpy(tmp,buf->str,buf->allocated);
+		free(buf->str);
+		buf->str = tmp;
+	}
+	strcat(buf->str,p);
+}
+
+void remove_whitespace(char *p){
+	char *p2 = p;
+	int inString = -1;
+	int escaped = 0;
+
+	while(*p2 != '\0'){
+		while (*p2 != '\0' && 
+			inString == -1 && 
+			( *p2 == ' ' || *p2 == '\t' || *p2 == '\r' ))
+			p2++;
+
+		if (*p2 == '"' && !escaped)
+			inString *= -1;
+
+		if (!escaped && *p2 == '\\')
+			escaped = 1;
+		else{
+			escaped = 0;
+		}
+		*p++ = *p2++;
+	}
+	*p = '\0';
+}
+
+// error handling
+
+void print_error_msg(char *line, int linenum, int pos){
+	fprintf(stderr,"Encountered an erro while parsing JSON\n");
+	fprintf(stderr,"%5d |%s",linenum,line);
+	fprintf(stderr,"%7s","|");
+	while(pos-- > 0){
+		fprintf(stderr," ");
+	}
+	fprintf(stderr,"^\n");
+
+}
+
 enum lit_token {
 	JSON_TRUE = 1000,
 	JSON_FALSE,
 	JSON_NULL,
 };
 
-enum val_type {
-	JSON_NUM = 2000,
-	JSON_CHAR,
-	JSON_STR,
-	JSON_OBJ,
-	JSON_LITERAL,
-	JSON_LIST
-
-};
 
 
 typedef struct json_val{
@@ -150,53 +216,38 @@ typedef struct json_obj{
 *
 *
 */
-void *derefer(json_val *to_dereference, int *intval, int *boolval){
-	switch (to_dereference->type){
-		case JSON_NUM:
-			*intval = *((int*) to_dereference->data);
-			return to_dereference->data;
-		break;
-		case JSON_LITERAL:
-			if (*((int*) to_dereference->data) == JSON_NULL)
-				*boolval = JSON_NULL;
-			if (*((int*) to_dereference->data) == JSON_FALSE)
-				*boolval = 0;
-			if (*((int*) to_dereference->data) == JSON_TRUE)
-				*boolval = 1;
-		break;
-	}
-	return NULL;
-}
-
-/*
- * wrapper for getchar
- */
-int readchar(FILE *stream){
-	int c;
-	while(isspace(c = fgetc(stream)))
-		if(c == '\n')
-			line++;
-	return c;
-}
-
-int skipwhitespace(FILE *stream){
-	int c,count =0;
-	while (isspace(c = getc(stream))){
-		if ( c== '\n')
-			line++;
-		count++;
-	}
-	if (c == EOF){
-		fprintf(stderr, "encountered EOF\n");
-		die();
-	}
-	ungetc(c,stream);
-	return count;
-}
-
 /*
  * only works for Char, num, str, and literals
  */
+
+
+
+/*
+ *  try parsing. 
+ *  On failure it will cleanup all allocated memory and exit program
+*/
+#define KEY 10;
+#define VAL 11;
+
+enum val_type {
+	JSON_NUM = 2000,
+	JSON_CHAR,
+	JSON_STR,
+	JSON_OBJ,
+	JSON_LITERAL,
+	JSON_LIST
+
+};
+
+enum TOKENS {
+	KEY_VAL_SEP = 20,
+	LIST_OPEN,
+	LIST_CLOSE,
+	OBJECT_OPEN,
+	OBJECT_CLOSE,
+	NEWLINE
+};
+
 void json_val_free(json_val *p){
 	switch( p->type){
 		case JSON_NUM:
@@ -220,151 +271,188 @@ void AL_free_wrapper(void *p, int pos){
 	json_val_free((json_val*) p);
 }
 
+json_val *parse_val(char **after);
+json_val *parse_object(char **after);
 
-json_val *parse_Val(FILE *stream);
-json_val *parse_Array(FILE *stream){
-	//first character i get is always [
-	int c;
-	if (( c = readchar(stream)) != '['){
-		fprintf(stderr,"parse_Array failed\n");
-		die();
-	}
-	json_val *output = malloc(sizeof(json_val));
-	output->type = JSON_LIST;
-	output->data = AL_init(1);
-	
-	json_val *tmp;
-	while ((c = readchar(stream))!= ']' && c != EOF){
-		ungetc(c,stream);
-		if ( (tmp = parse_Val(stream)) == NULL ){
-			AL_foreach(output->data, &AL_free_wrapper );
-			AL_free(output->data);
-			free(output);
-			fprintf(stderr,"failed on %d\n",c);
-			die();
-		}
-		AL_append(output->data,(void*) tmp);
-
-		if (( c = readchar(stream)  != ','))
-			ungetc(c,stream);
-	}
-	return output;
-}
-
-json_val *parse_Object(FILE *stream);
-json_val *parse_Array(FILE *stream);
-json_val *parse_String(FILE *stream);
-json_val *parse_Lit(FILE *stream);
-
-json_val *parse_Object(FILE *stream){return NULL;}
-json_val *parse_String(FILE *stream){return NULL;}
-json_val *parse_Lit(FILE *stream){return NULL;}
-
-json_val *parse_Num(FILE *stream){
-	int c;
-	float val;
-	int sign = 1;
-
-	if ((c = getc(stream)) == '-'){
-		sign = -1;
-	} else {
-		ungetc(c, stream);
-	}
-
-	if ((c = getc(stream)) == '0'){
-		if (isdigit((c = getc(stream)))){
-			fprintf(stderr,"number cant start with leading 0\n");
-			return NULL;
-		}else{
-			val = 0;
-			ungetc(c,stream);
-		}
-			
-	} else {
-		ungetc(c, stream);
-	}
-
-	if (fscanf(stream,"%f",&val) != 1 && val != 0){
-		fprintf(stderr,"error reading number\n");
-		return NULL;
-	}
-
-	json_val *output = malloc(sizeof(json_val));
-	float *output_data = (float*) malloc(sizeof(float));
-	*output_data = sign * val;
-	output->type = JSON_NUM;
-	output->data = (void*) output_data;
-	return output;
-}
-
-json_val *parse_Val(FILE *stream){
-	int c;
-	json_val *output = NULL;
-	if ((c = readchar(stream)) == EOF){
-		return NULL;
-	}
-	ungetc(c,stream);
-	switch(c){
-		case '{':
-			return parse_Object(stream);
-		break;
-		case '[':
-			return parse_Array(stream);
-		break;
-		case '\"':
-			return parse_String(stream);
-		break;
-	}
-
-	if ( strchr("-0123456789",c) != NULL){
-		return parse_Num(stream);
-	} else {
-		return parse_Lit(stream);
-	}
-}
+json_val *parse_object(char **after){return NULL;}
 
 /*
- *  try parsing. 
- *  On failure it will cleanup all allocated memory and exit program
+* starts immediately after [
 */
-json_val *parse_Start(FILE *stream){
-	json_val *output;
-	if ((output = parse_Val(stream)) != NULL){
-		return output;
+json_val *parse_list(char **after){
+	if( **after == '\n'){
+		after++;
 	}
-	fprintf(stderr,"Failed parsing json\n\n");
-	die();
+	json_val *output = NULL;
+	json_val *tmp = NULL;
+	int failed = 0;
+	ArrayList *al = AL_init(10);
+	// TODO: fix it so that [,val,] and stuff like that is not possible
+	while ( **after != ']'){
+		if (**after == '\n')
+			(*after)++;
+		if (**after == ',')
+			(*after)++;
+		if (**after == '\n')
+			(*after)++;
+
+		tmp = parse_val(after);
+		if (tmp == NULL){
+			failed = 1;
+			break;
+		}
+		if (**after == '\n')
+			(*after)++;
+		if (**after == ',')
+			(*after)++;
+		if (**after == '\n')
+			(*after)++;
+		AL_append(al,tmp);
+	}
+
+	if (failed == 1){
+		//TODO free arraylist properly using foreach
+		AL_free(al);
+		return NULL;
+	}
+	output = malloc(sizeof(json_val));
+	output->data = (void*) al;
+	output->type = JSON_LIST;
+	return output;
+}
+
+json_val *parse_num(char **after){
+	if ( **after == '0' &&  isdigit(*(*(after)+1)))
+		return NULL;
+
+	float val = 0;
+	int sign = 1;
+	float frac = 0.1;
+	int exp = 0;
+	int expsign = 1;
+	float full_exponent = 1;
+	if (**after == '-'){
+		after++;
+		sign = -1;
+	}
+	while (isdigit((**after))){
+		val += val * 10 + **after - '0';
+		(*after)++;
+	}
+	if ( **after == '.'){
+		(*after)++;
+		while (isdigit((**after))){
+			val += (**after - '0') * frac;
+			frac *= 0.1;
+			(*after)++;
+		}
+	}
+	if ( **after == 'e' || **after == 'E'){
+		(*after)++;
+		
+		if (**after == '-' || **after == '+'){
+			expsign = (**after == '.') ? -1 : 1;
+			after++;
+		}
+		while (isdigit((**after))){
+			exp += exp *10 + **after - '0';
+			(*after)++;
+		}
+	} else {
+		exp = 0;
+	}
+
+	while (exp--)
+		full_exponent *= 10;
+	
+	if ( expsign == -1)
+		full_exponent = 1 / full_exponent;
+	
+	json_val *output = malloc(sizeof(json_val));
+	output->data = (void*) malloc(sizeof(float));
+	output->type = JSON_NUM;
+	*((float*) output->data) = sign*(val * full_exponent);
+	printf("value is %f\n",*( (float*)output->data));
+	printf("offset string is \n%s\n",*after);
+
+	if(**after == '\n')
+		(*after)++;
+	return output;
+}
+
+json_val *parse_val(char **after){
+	if (**after == '\n'){
+		after++;
+	}
+	switch(**after){
+		case '[':
+			(*after)++;
+			return parse_list(after);
+		break;
+		case '{':
+			(*after)++;
+			return parse_object(after);
+		break;
+	}
+
+	if (strchr("-0123456789",**after) != NULL)
+		return parse_num(after);
 	return NULL;
 }
 
 
-int main(void){
+json_val *parse_json_str(char *s){
+	char **offset = malloc(sizeof(char*));
+	*offset = s;
+	return parse_val(offset);
+}
 
-	printf("üest\n");
-	hash_obj **tab1 = init_hash_table();
-	char *n1 = strdup("abc");
-	void *p1 = (void*) malloc(sizeof(int));
-	printf("installing %s:%p\t %p\n",n1,p1,(void*) install(tab1,n1,p1));
-	printf("lookup results in %p\n", lookup(tab1,n1)->val);
 
-	char *n2 = strdup("def");
-	void *p2 = (void*) malloc(sizeof(int));
-	printf("installing %s:%p\t%p\n",n2,p2, (void*) install(tab1,n2,p2));
-	printf("lookup results in %p\n", lookup(tab1,n2)->val);
+json_val *parse_json_file(char *filename){
+	json_val *output;
+	char *line = (char*) malloc(sizeof(char) * MAXLINE);
 
-	free_hash_table(tab1);
-
-	//json_val *retval = parse_Num(stdin);
-	FILE *testjson = fopen("1test.json","r");
-	json_val *retval = parse_Start(testjson);
-	ArrayList *list = (ArrayList*) retval->data;
-	printf("Type: %d\n",retval->type);
-	printf("list: %p\n",list);
-	printf("len: %d\n",list->len);
-	for (int i = 0; i< list->len; i++){
-		printf("[%d] = %d\n",i,*((int*) AL_get(list,i)));
+	FILE *input = fopen(filename,"r");
+	if (input == NULL){
+		fprintf(stderr,"cant find file %s\n",filename);
+		free(line);
+		return NULL;
 	}
-	//printf("read %f\n",*((float*) retval->data));
+
+	sbuf *sb = sbuf_init();
+	// doesnt work because this would allow [] [] 
+	while ( fgets(line, MAXLINE, input) != NULL){
+		remove_whitespace(line);
+		if (line_is_empty(line))
+			continue;
+		sbuf_append(sb, line);
+		
+	}
+	printf("%s",sb->str);
+
+	printf("begin parsing\n");
+	return parse_json_str(sb->str);
+	sbuf_free(sb);
+	free(line);
+	fclose(input);
+	return NULL;
+}
+void print_entry(void *p, int pos){
+	printf("%f\n",*((float*) ((json_val*) p)->data));
+}
+
+int main(int argc, char **argv){
+
+
+	if( argc < 2){
+		printf("no args\n");
+		return 1;
+	}
+	
+	json_val *test = parse_json_file(argv[1]);
+	printf("%p\n",test);
+	ArrayList *testList = test->data;
+	AL_foreach(testList, &print_entry);
 
 
 
