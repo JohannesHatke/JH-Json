@@ -5,6 +5,17 @@ from os.path import isfile,join
 
 from sys import argv
 
+class colors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    END = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
 
 seperator = """
 ----------------------------------------------------
@@ -27,15 +38,26 @@ def main():
     test_files =[join(cwd,x) for x in listdir(cwd) if ( isfile(x) )]
     test_files.sort()
     print(test_files)
+    passed = True
     for file in test_files:
-        print(seperator)
-        print("\n\n\ttesting "+file)
+        print(f"\n{colors.HEADER}testing {file} {colors.END}")
         if not isvalid(file):
-            print("\tis not valid json,skipping")
+            print(f"{colors.WARNING}\tis not valid json,skipping{colors.END}")
             continue;
-        system("../build/main " + file)
+        retval = system("../build/main " + file)
+        print(f"{colors.BOLD}\texited with signal {retval} {colors.END}")
+        passed = passed and ( retval == 0)
+
+    print(f"{colors.BOLD}TESTS:{colors.END}")
+    if passed:
+        print(f"{colors.OKGREEN}all tests passed {colors.END}")
+    else:
+        print(f"{colors.FAIL}not passed {colors.END}")
+            
+
 
         
+
 
 
 if __name__ =="__main__":
