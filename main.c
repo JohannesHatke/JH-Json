@@ -330,7 +330,8 @@ json_val *parse_literal(char **s){
 			return NULL;
 		break;
 	}
-	if (!isspace(**s) && **s != ','){
+	//TODO: move this into parseList (this behaviour should be checked outside of this function
+	if (!isspace(**s) && **s != ',' && **s != ']'){
 		free(data);
 		return NULL;
 	}
