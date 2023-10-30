@@ -1,0 +1,43 @@
+#! /bin/python3
+import json
+from os import getcwd, listdir,system
+from os.path import isfile,join
+
+from sys import argv
+
+
+seperator = """
+----------------------------------------------------
+----------------------------------------------------
+"""
+def isvalid(filename:str) -> bool:
+    with open(filename,"r") as f:
+        try:
+            json.load(f)
+            return True
+        except:
+            return False
+    
+
+
+
+
+def main():
+    cwd = getcwd()
+    test_files =[join(cwd,x) for x in listdir(cwd) if ( isfile(x) )]
+    test_files.sort()
+    print(test_files)
+    for file in test_files:
+        print(seperator)
+        print("\n\n\ttesting "+file)
+        if not isvalid(file):
+            print("\tis not valid json,skipping")
+            continue;
+        system("../build/main " + file)
+
+        
+
+
+if __name__ =="__main__":
+    main()
+
