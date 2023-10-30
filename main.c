@@ -302,12 +302,15 @@ void skipwhitespace( char **p){
 
 json_val *parse_literal(char **s){
 	int *data = malloc(sizeof(int));
+	printf("parse literal got:%s\n\n",*s);
 	json_val *output;
 	switch(**s){
 		case 't':
 			if (strncmp(*s,"true",4) == 0){
+				printf("\n\n\t\tbef:%c\n\n",**s);
 				*data = JSON_TRUE;
 				*s = *s +4;
+				printf("\n\n\t\taf:%c\n\n",**s);
 			}
 		break;
 		case 'f':
@@ -583,63 +586,81 @@ json_val *parse_json_file(char *filename){
 }
 
 
-void fprint_json(FILE *output, json_val* jv);
+//output 
 
-int Nesting = 0;
+
+void fprint_json(FILE *output, json_val* jv);
+void print_json_val(FILE *output, json_val *jv);
+
+int Nesting = 0; /* TODO: remove global variables*/
 FILE *Out;
+#define TABSIZE 8
+
+void print_nesting(FILE *output, int n){
+	while(n--)
+		fprintf(output,"\t");
+}
 
 void print_entry(void *p, int pos){
 	json_val *jv = (json_val*) p;
-	fprint_json(Out,jv);
+	fprintf(Out,"%s\n",( pos != 0) ? "," : "");
+	print_nesting(Out, Nesting);
+	print_json_val(Out,jv);
 }
 
-void fprint_json(FILE *output, json_val* jv){
-	Out = output;
-	for(int i = 0; i < Nesting; i++){
-		fprintf(output,"\t");
-	}
-
+void print_json_val(FILE *output, json_val *jv){
 	switch(jv->type){
 		case JSON_STR:
-			fprintf(output,"%s\n",((char*) jv->data));
+			fprintf(output,"%s",((char*) jv->data));
 		break;
 		case JSON_NUM:
-			fprintf(output,"%f\n",*((float*) jv->data));
+			fprintf(output,"%f",*((float*) jv->data));
 		break;
 		case JSON_LITERAL:
-			fprintf(output,"%s\n",(*((int*) jv->data) == -1 ) ? "null" :  ((*((int*) jv->data) ) ? "true" : "false") );
+			fprintf(output,"%s",(*((int*) jv->data) == -1 ) ? "null" :  ((*((int*) jv->data) ) ? "true" : "false") );
 			//printf("%d\n",*((int*) jv->data));
 		break;
 		case JSON_LIST:
-			fprintf(output,"[\n");
+			//print_nesting(Out, Nesting);
+			fprintf(output,"[");
 			Nesting++;
-			ArrayList *ls = jv->data;
 
-			AL_foreach(ls,&print_entry);
+			ArrayList *ls = jv->data;
+			if ( AL_foreach(ls,&print_entry) == 0){
+				Nesting--;
+				fprintf(output,"]");
+				break;
+			}
 
 			Nesting--;
-			for(int i = 0; i < Nesting; i++){
-				fprintf(output,"\t");
-			}
-			fprintf(output,"]\n");
+			fprintf(output,"\n");
+			print_nesting(Out, Nesting);
+			fprintf(output,"]");
 		break;
 		default:
 			printf("unknown\n");
 		break;
 	}
+}
 
+
+void fprint_json(FILE *output, json_val *jv){
+	Out = output;
+	Nesting = 0;
+	print_json_val(output, jv);
+	fprintf(output,"\n");
 }
 
 
 int main(int argc, char **argv){
+	//TODO fix parse_literal to pass test 10
 
-	//TODO write method to print out structure
 	//TODO do proper error checking
-	//TODO fix parse_literal
 	
 	
 
 
+	//freopen("/dev/null", "w", stderr);
 	if( argc < 2){
 		printf("no args\n");
 		return 1;

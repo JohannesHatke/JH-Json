@@ -1,7 +1,7 @@
 #! /bin/python3
 import json
 from os import getcwd, listdir,system
-from os.path import isfile,join
+from os.path import isfile,join,basename
 
 from sys import argv
 
@@ -17,10 +17,6 @@ class colors:
     UNDERLINE = '\033[4m'
 
 
-seperator = """
-----------------------------------------------------
-----------------------------------------------------
-"""
 def isvalid(filename:str) -> bool:
     with open(filename,"r") as f:
         try:
@@ -34,6 +30,7 @@ def isvalid(filename:str) -> bool:
 
 
 def main():
+    endstring = f""
     cwd = getcwd()
     test_files =[join(cwd,x) for x in listdir(cwd) if ( isfile(x) )]
     test_files.sort()
@@ -46,6 +43,12 @@ def main():
             continue;
         retval = system("../build/main " + file)
         print(f"{colors.BOLD}\texited with signal {retval} {colors.END}")
+
+        if( retval != 0):
+            endstring += f"{colors.FAIL} {basename(file)} failed   ✗{colors.END}\n"
+        else:
+            endstring += f"{colors.OKGREEN} {basename(file)} success! ✓{colors.END}\n"
+
         passed = passed and ( retval == 0)
 
     print(f"{colors.BOLD}TESTS:{colors.END}")
@@ -55,6 +58,7 @@ def main():
         print(f"{colors.FAIL}not passed {colors.END}")
             
 
+    print(endstring)
 
         
 
