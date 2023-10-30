@@ -330,13 +330,8 @@ json_val *parse_literal(char **s){
 			return NULL;
 		break;
 	}
-	//TODO: move this into parseList (this behaviour should be checked outside of this function
-	if (!isspace(**s) && **s != ',' && **s != ']'){
-		free(data);
-		return NULL;
-	}
-	skipwhitespace(s);
 
+	skipwhitespace(s);
 	output = malloc(sizeof(json_val));
 	output->data = data;
 	output->type = JSON_LITERAL;
