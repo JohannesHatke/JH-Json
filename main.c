@@ -155,6 +155,9 @@ void sbuf_append(sbuf *buf, char *p){
 	strcat(buf->str,p);
 }
 
+
+
+
 void remove_whitespace(char *p){
 	char *p2 = p;
 	int inString = -1;
@@ -193,9 +196,9 @@ void print_error_msg(char *line, int linenum, int pos){
 }
 
 enum lit_token {
-	JSON_TRUE = 1000,
+	JSON_NULL = -1,
 	JSON_FALSE,
-	JSON_NULL,
+	JSON_TRUE
 };
 
 
@@ -281,7 +284,7 @@ void json_val_free(json_val *p){
 
 json_val *parse_val(char **after);
 json_val *parse_object(char **after);
-
+json_val *parse_literal(char **after);
 json_val *parse_object(char **after){return NULL;}
 
 
@@ -296,6 +299,46 @@ void skipwhitespace( char **p){
 /*
 * starts immediately after [
 */
+
+json_val *parse_literal(char **s){
+	int *data = malloc(sizeof(int));
+	json_val *output;
+	switch(**s){
+		case 't':
+			if (strncmp(*s,"true",4) == 0){
+				*data = JSON_TRUE;
+				*s = *s +4;
+			}
+		break;
+		case 'f':
+			if (strncmp(*s,"false",5) == 0){
+				*data = JSON_FALSE;
+				*s = *s +5;
+			}
+		break;
+		case 'n':
+			if (strncmp(*s,"null",4) == 0){
+				*data = JSON_NULL;
+				*s = *s +4;
+			}
+		break;
+		default:
+			free(data);
+			return NULL;
+		break;
+	}
+	if (!isspace(**s) && **s != ','){
+		free(data);
+		return NULL;
+	}
+	skipwhitespace(s);
+
+	output = malloc(sizeof(json_val));
+	output->data = data;
+	output->type = JSON_LITERAL;
+	return output;
+}
+
 json_val *parse_list(char **after){
 	#define skipline(c) if (**after == c && *((*after)+1) != '\0') (*after)++
 	json_val *output = NULL;
@@ -306,19 +349,24 @@ json_val *parse_list(char **after){
 	while ( **after != ']'){
 		skipwhitespace(after);
 		if (**after != ',' && i != 0){
-			printf("comma failure");
+			printf("comma failure\n");
 			return NULL;
 		}
 		skipwhitespace(after);
 		skipline(',');
 		skipwhitespace(after);
 
-		tmp = parse_val(after);
+		if (**after != ']') //without we try to parse ] as val
+			tmp = parse_val(after);
+		else 
+			break;
+
 		if (tmp == NULL){
 			failed = 1;
 			break;
 		}
 		AL_append(al,tmp);
+		skipwhitespace(after);
 		i++;
 	}
 
@@ -336,6 +384,7 @@ json_val *parse_list(char **after){
 }
 
 json_val *parse_num(char **after){
+	// not using sscanf because we have to move the pointer anyway
 	if ( **after == '0' &&  isdigit(*(*(after)+1)))
 		return NULL;
 
@@ -475,13 +524,18 @@ json_val *parse_val(char **after){
 			output = parse_str(after);
 		break;
 	}
-	if (output){
-		skipwhitespace(after);
-	}
 
 	if (!output && strchr("-0123456789",**after) != NULL)
 		return parse_num(after);
 
+
+	//try parsing a literal
+	if (!output && ((output = parse_literal(after)) == NULL)){
+		printf("parsing value failed %s\n",*after);
+
+	}
+
+	skipwhitespace(after);
 	printf("after parsing value is remaining :%s:\n",*after);
 	return output;
 }
@@ -527,19 +581,63 @@ json_val *parse_json_file(char *filename){
 	fclose(input);
 	return output;
 }
+
+
+void fprint_json(FILE *output, json_val* jv);
+
+int Nesting = 0;
+FILE *Out;
+
 void print_entry(void *p, int pos){
 	json_val *jv = (json_val*) p;
-	switch(jv->type){
-		case JSON_STR:
-			printf("%s\n",((char*) jv->data));
-		break;
-		case JSON_NUM:
-			printf("%f\n",*((float*) jv->data));
-		break;
-	}
+	fprint_json(Out,jv);
 }
 
+void fprint_json(FILE *output, json_val* jv){
+	Out = output;
+	for(int i = 0; i < Nesting; i++){
+		fprintf(output,"\t");
+	}
+
+	switch(jv->type){
+		case JSON_STR:
+			fprintf(output,"%s\n",((char*) jv->data));
+		break;
+		case JSON_NUM:
+			fprintf(output,"%f\n",*((float*) jv->data));
+		break;
+		case JSON_LITERAL:
+			fprintf(output,"%s\n",(*((int*) jv->data) == -1 ) ? "null" :  ((*((int*) jv->data) ) ? "true" : "false") );
+			//printf("%d\n",*((int*) jv->data));
+		break;
+		case JSON_LIST:
+			fprintf(output,"[\n");
+			Nesting++;
+			ArrayList *ls = jv->data;
+
+			AL_foreach(ls,&print_entry);
+
+			Nesting--;
+			for(int i = 0; i < Nesting; i++){
+				fprintf(output,"\t");
+			}
+			fprintf(output,"]\n");
+		break;
+		default:
+			printf("unknown\n");
+		break;
+	}
+
+}
+
+
 int main(int argc, char **argv){
+
+	//TODO write method to print out structure
+	//TODO do proper error checking
+	//TODO fix parse_literal
+	
+	
 
 
 	if( argc < 2){
@@ -550,8 +648,10 @@ int main(int argc, char **argv){
 	json_val *test = parse_json_file(argv[1]);
 	printf("%p\n",test);
 	ArrayList *testList = test->data;
-	AL_foreach(testList, &print_entry);
-	json_val_free(test);
+	//AL_foreach(testList, &print_entry);
+	fprint_json(stdout,test);
+
+	//json_val_free(test);
 
 	return 0;
 }
