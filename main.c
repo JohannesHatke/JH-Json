@@ -321,7 +321,6 @@ json_val *parse_object(char **after){return NULL;}
 
 json_val *parse_literal(char **s){
 	int *data = malloc(sizeof(int));
-	fprintf(stderr,"parse literal got:%s\n\n",*s);
 	json_val *output;
 	switch(**s){
 		case 't':
@@ -362,8 +361,8 @@ json_val *parse_list(char **after){
 	int failed = 0;
 	ArrayList *al = AL_init(10);
 	int i = 0;
+	skipwhitespace(after);
 	while ( **after != ']'){
-		skipwhitespace(after);
 		if (**after != ',' && i != 0){
 			return NULL;
 		}
@@ -449,8 +448,6 @@ json_val *parse_num(char **after){
 	output->data = (void*) malloc(sizeof(float));
 	output->type = JSON_NUM;
 	*((float*) output->data) = sign*(val * full_exponent);
-	fprintf(stderr,"value is %f\n",*( (float*)output->data));
-	fprintf(stderr,"offset string is \n%s\n",*after);
 
 	if(**after == '\n')
 		(*after)++;
@@ -548,7 +545,6 @@ json_val *parse_val(char **after){
 	}
 
 	skipwhitespace(after);
-	fprintf(stderr,"after parsing value is remaining :%s:\n",*after);
 	return output;
 }
 
@@ -583,7 +579,7 @@ json_val *parse_json_file(char *filename){
 		sbuf_append(sb, line);
 		
 	}
-	fprintf(stderr,"%s",sb->str);
+	fprintf(stderr,"file input read:\n%s",sb->str);
 
 	fprintf(stderr,"begin parsing\n");
 	output = parse_json_from_str(sb->str);
@@ -597,7 +593,7 @@ json_val *parse_json_file(char *filename){
 
 // general test setup:
 int main(int argc, char **argv){
-	freopen("/dev/null", "w", stderr);
+	// freopen("/dev/null", "w", stderr);
 
 	if( argc < 2){
 		printf("no args\n");
@@ -607,17 +603,13 @@ int main(int argc, char **argv){
 	json_val *test = parse_json_file(argv[1]);
 	if (test == NULL)
 		return 2;
+	fprintf(stderr,"----\nparsed: \n");
 	fprint_json(stderr,test);
 	json_val_free(test);
 
 	return 0;
 }
 
-	//TODO:
-	//In this branch:
-	// - clean up code (half done)
-	//	- clean up parse_list
-	// - merge once done
 
 
 	//In seperate branch:
