@@ -64,7 +64,7 @@ def test_folder(folder_path:str,*flags) -> str:
 
 
 def main():
-    test_locations = ["tests/list_tests","tests/object_tests"]
+    test_locations = ["tests/list_tests","tests/str_tests","tests/object_tests"]
 
     final_output = ""
     for location in test_locations:

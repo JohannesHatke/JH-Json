@@ -1,6 +1,6 @@
 CFLAGS= -Wall -Wextra -pedantic -O0 -g
 ./build/main:build ./build/main.o ./build/utf8.o ./build/ArrayList.o
-	$(CC) $(CFLAGS)  ./build/ArrayList.o ./build/main.o -o ./build/main
+	$(CC) $(CFLAGS)  ./build/utf8.o ./build/ArrayList.o ./build/main.o -o ./build/main -lm
 ./build: 
 	mkdir build
 ./build/main.o: ./build main.c

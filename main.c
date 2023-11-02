@@ -255,6 +255,43 @@ int Nesting = 0; /* TODO: remove global variables*/
 FILE *Out;
 #define TABSIZE 8
 
+void print_json_str(FILE *output, char *s){
+	int c;
+	fprintf(output,"\"");
+	while (( c = *s++) != '\0' ){
+		switch(c){
+			case '"':
+				fprintf(output,"\\\"");
+			break;
+			case '\\':
+				fprintf(output,"\\\\");
+			break;
+			case '/':
+				fprintf(output,"\\/");
+			break;
+			case '\b':
+				fprintf(output,"\\b");
+			break;
+			case '\f':
+				fprintf(output,"\\f");
+			break;
+			case '\n':
+				fprintf(output,"\\n");
+			break;
+			case '\r':
+				fprintf(output,"\\r");
+			break;
+			case '\t':
+				fprintf(output,"\\t");
+			break;
+			default:
+				fprintf(output,"%c",c);
+			break;
+		}
+	}
+	fprintf(output,"\"");
+}
+
 void print_nesting(FILE *output, int n){
 	while(n--)
 		fprintf(output,"\t");
@@ -270,7 +307,7 @@ void print_entry(void *p, int pos){
 void print_json_val(FILE *output, json_val *jv){
 	switch(jv->type){
 		case JSON_STR:
-			fprintf(output,"%s",((char*) jv->data));
+			print_json_str(output,(char*) jv->data);
 		break;
 		case JSON_NUM:
 			fprintf(output,"%f",*((float*) jv->data));
@@ -454,11 +491,34 @@ json_val *parse_num(char **after){
 	return output;
 }
 
+int four_digit_hex_to_int(char *p){
+	int i,charval,val=0,c;
+	for (i =0 ; i<4; i++,*p != '\0') {
+		c = *p++;
+		if (isdigit(c)){
+			charval = c - '0';
+		} else if (isalpha(c)){
+			c = (isupper(c)) ? c + 32: c;
+			
+			charval = c - 'a' + 10;
+		} else {
+			return -1;
+		}
+		val = val *16 + charval;
+	}
+	if ( i != 4) {
+		return -1;
+	}
+	return val;
+	
+}
+
 /*
 * starts inside string already
 */
 char *read_str(char **p){
-	int fail,c,escaped = 0;
+	int unic,fail,c,escaped = 0;
+	fail = 0;
 	sbuf *s = sbuf_init();
 	char *str,storage[2];
 	storage[1] = '\0';
@@ -497,7 +557,12 @@ char *read_str(char **p){
 					sbuf_append(s, "\t");
 				break;
 				case 'u':
-					//TODO Unicode
+					if ( (unic = four_digit_hex_to_int(*p)) < 0){
+						fail = 1;
+						break;
+					}
+					*p = *p + 4;
+					sbuf_append(s,utf8_encode(unic));
 				break;
 				default:
 					//TODO write error (for now just skipping
@@ -508,16 +573,16 @@ char *read_str(char **p){
 			sbuf_append(s, storage);
 		}
 	}
-	(*p)++;
-	
-	str = s->str;
-	if (fail){
+	if (c != '"' || fail){
 		sbuf_free(s);
+		return NULL;
 	}
+	
 
+	(*p)++;
+	str = s->str;
 	free(s);
 	return str;
-	
 }
 
 json_val *parse_str(char **p){
@@ -528,6 +593,7 @@ json_val *parse_str(char **p){
 	output->data = str;
 	return output;
 }
+
 json_val *parse_val(char **after){
 	skipwhitespace(after);
 	json_val *output = NULL;
