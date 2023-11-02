@@ -457,11 +457,10 @@ json_val *parse_num(char **after){
 /*
 * starts inside string already
 */
-json_val *parse_str(char **p){
-	int c,escaped = 0;
+char *read_str(char **p){
+	int fail,c,escaped = 0;
 	sbuf *s = sbuf_init();
-	char storage[2];
-	json_val *output;
+	char *str,storage[2];
 	storage[1] = '\0';
 	while( (c = (**p) ) != '\0' && !(c == '"' && !escaped)){
 		(*p)++;
@@ -510,10 +509,23 @@ json_val *parse_str(char **p){
 		}
 	}
 	(*p)++;
+	
+	str = s->str;
+	if (fail){
+		sbuf_free(s);
+	}
+
+	free(s);
+	return str;
+	
+}
+
+json_val *parse_str(char **p){
+	char *str = read_str(p);
+	json_val *output;
 	output = malloc(sizeof(json_val));
 	output->type = JSON_STR;
-	output->data = s->str;
-	free(s);
+	output->data = str;
 	return output;
 }
 json_val *parse_val(char **after){
