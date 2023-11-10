@@ -493,7 +493,7 @@ json_val *parse_num(char **after){
 
 int four_digit_hex_to_int(char *p){
 	int i,charval,val=0,c;
-	for (i =0 ; i<4; i++,*p != '\0') {
+	for (i =0 ; i<4 && *p != '\0'; i++) {
 		c = *p++;
 		if (isdigit(c)){
 			charval = c - '0';
@@ -626,13 +626,53 @@ json_val *parse_val(char **after){
 	return output;
 }
 
+void json_err(char *begin, char *end){
+	char *linebegin;
+	sbuf *err_line = sbuf_init();
+	char *curr = linebegin = begin;
+	int len,offset,linenum = 1;
+	offset= 0;
+	while ( curr != end){
+		if(*curr == '\n'){
+			linebegin = curr+1;
+			offset = -1;
+			linenum++;
+		}
+		curr++;
+		offset++;
+	}
+
+	curr = linebegin;
+	len = 2;
+	while ( *curr != '\0' && *curr != '\n'){
+		curr++;
+		len++;
+	}
+	const char *gap = "          ";
+	char err_msg[100+len+offset*3];
+
+	sprintf(err_msg,"error on line %d:\n",linenum);
+	strncat(err_msg,linebegin,len-2);
+	strcat(err_msg,"\n");
+	for (int i = 0; i< offset / 10; i++) {
+		strcat(err_msg,gap);
+	}
+	for (int i = 0; i< offset % 10; i++) {
+		strcat(err_msg," ");
+	}
+	strcat(err_msg,"^\n");
+
+	fprintf(stderr,"%s",err_msg);
+}
 
 json_val *parse_json_from_str(char *s){
 	char **str = malloc(sizeof(char*));
 	*str = s;
+	char *before = *str;
 	json_val *output;
 	if ((output = parse_val(str)) == NULL){
 		printf("died at %s\n",*str); //TODO:proper check using s and str as parameters for func call
+		json_err(before,*str);
 	}
 	free(str);
 	return output;
@@ -651,6 +691,8 @@ json_val *parse_json_file(char *filename){
 	}
 
 	sbuf *sb = sbuf_init();
+
+	//TODO: improve to allow infinite line length using sbuf
 	while ( fgets(line, MAXLINE, input) != NULL){
 		if (line_is_empty(line))
 			continue;
@@ -685,6 +727,7 @@ int main(int argc, char **argv){
 	fprint_json(stderr,test);
 	json_val_free(test);
 
+	char *err_test = (char*) malloc(300*sizeof(char));
 	return 0;
 }
 
@@ -692,9 +735,6 @@ int main(int argc, char **argv){
 
 	//In seperate branch:
 	// - (1) do proper error checking
-	// - (2) improve strings
-	//	- print escapes
-	//	- use UTF8 encodings
 	// - (2) add objects (using general structure of parse_list
 	//	- add tests
 	// - (3) add README and proper documentation
