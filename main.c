@@ -161,19 +161,6 @@ void skipwhitespace( char **p){
 		(*p)++;
 }
 
-// error handling
-
-void print_error_msg(char *line, int linenum, int pos){
-	fprintf(stderr,"Encountered an erro while parsing JSON\n");
-	fprintf(stderr,"%5d |%s",linenum,line);
-	fprintf(stderr,"%7s","|");
-	while(pos-- > 0){
-		fprintf(stderr," ");
-	}
-	fprintf(stderr,"^\n");
-
-}
-
 
 /* JSON Part */
 
@@ -208,9 +195,12 @@ enum val_type {
 	JSON_STR,
 	JSON_OBJ,
 	JSON_LITERAL,
-	JSON_LIST
+	JSON_LIST,
+	JSON_VAL //just for error checking
 
 };
+
+int err_val = JSON_NUM;
 
 
 /* Json_val methods for cleanup */
@@ -351,7 +341,10 @@ void fprint_json(FILE *output, json_val *jv){
 json_val *parse_val(char **after);
 json_val *parse_object(char **after);
 json_val *parse_literal(char **after);
-json_val *parse_object(char **after){return NULL;}
+json_val *parse_object(char **after){
+	err_val = JSON_OBJ;
+	return NULL;
+}
 
 
 
@@ -380,6 +373,7 @@ json_val *parse_literal(char **s){
 		break;
 		default:
 			free(data);
+			err_val = JSON_LITERAL;
 			return NULL;
 		break;
 	}
@@ -424,6 +418,7 @@ json_val *parse_list(char **after){
 	if (failed){
 		AL_foreach(al, &AL_free_wrapper);
 		AL_free(al);
+		err_val = JSON_LIST;
 		return NULL;
 	}
 	(*after)++; // skipping ]
@@ -435,8 +430,10 @@ json_val *parse_list(char **after){
 
 json_val *parse_num(char **after){
 	// not using sscanf because we have to move the pointer anyway
-	if ( **after == '0' &&  isdigit(*(*(after)+1)))
+	if ( **after == '0' &&  isdigit(*(*(after)+1))){
+		err_val = JSON_NUM;
 		return NULL;
+	}
 
 	float val = 0;
 	int sign = 1;
@@ -589,7 +586,7 @@ json_val *parse_str(char **p){
 	char *str = read_str(p);
 	json_val *output;
 	output = malloc(sizeof(json_val));
-	output->type = JSON_STR;
+	err_val = output->type = JSON_STR;
 	output->data = str;
 	return output;
 }
@@ -616,19 +613,26 @@ json_val *parse_val(char **after){
 		return parse_num(after);
 
 
-	//try parsing a literal
 	if (!output && ((output = parse_literal(after)) == NULL)){
-		fprintf(stderr,"parsing value failed %s\n",*after);
-
+		;
 	}
 
 	skipwhitespace(after);
 	return output;
 }
 
+
 void json_err(char *begin, char *end){
+	const char *err_codes[] = {
+	"NUM_ERR",
+	"CHAR_ERR",
+	"STR_ERR",
+	"OBJ_ERR",
+	"LITERAL_ERR",
+	"LIST_ERR",
+	"VAL_ERR"
+	};
 	char *linebegin;
-	sbuf *err_line = sbuf_init();
 	char *curr = linebegin = begin;
 	int len,offset,linenum = 1;
 	offset= 0;
@@ -651,7 +655,8 @@ void json_err(char *begin, char *end){
 	const char *gap = "          ";
 	char err_msg[100+len+offset*3];
 
-	sprintf(err_msg,"error on line %d:\n",linenum);
+	fprintf(stderr,"%d\n",err_val-JSON_NUM);
+	sprintf(err_msg,"%s occured on line %d:\n",err_codes[err_val- JSON_NUM],linenum);
 	strncat(err_msg,linebegin,len-2);
 	strcat(err_msg,"\n");
 	for (int i = 0; i< offset / 10; i++) {
@@ -671,7 +676,6 @@ json_val *parse_json_from_str(char *s){
 	char *before = *str;
 	json_val *output;
 	if ((output = parse_val(str)) == NULL){
-		printf("died at %s\n",*str); //TODO:proper check using s and str as parameters for func call
 		json_err(before,*str);
 	}
 	free(str);
@@ -727,7 +731,6 @@ int main(int argc, char **argv){
 	fprint_json(stderr,test);
 	json_val_free(test);
 
-	char *err_test = (char*) malloc(300*sizeof(char));
 	return 0;
 }
 
