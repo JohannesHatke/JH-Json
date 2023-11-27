@@ -36,7 +36,7 @@ def test_folder(folder_path:str,*flags) -> str:
     passed = True 
     test_files =[join(folder_path,x) for x in listdir(folder_path)
                  if ( isfile(join(folder_path,x)) )]
-    heading = f"{colors.BOLD}{colors.UNDERLINE}Result of tests in:{colors.END}\n\t{folder_path}"
+    heading = f"{colors.BOLD}{colors.UNDERLINE}Result of tests in:{colors.END} {folder_path}"
     
     count = 0
     for file in test_files:
@@ -48,10 +48,17 @@ def test_folder(folder_path:str,*flags) -> str:
         retval = system("./build/main " + file)
         print(f"{colors.BOLD}\texited with signal {retval} {colors.END}")
 
-        if( retval != 0 and expect_to_pass):
-            output += f"{colors.FAIL}\t\t{basename(file)} failed   ✗{colors.END}\n"
+        if expect_to_pass:
+            if( retval != 0 ):
+                output += f"{colors.FAIL}\t\t{basename(file)} failed   ✗{colors.END}\n"
+            else:
+                output += f"{colors.OKGREEN}\t\t{basename(file)} success! ✓{colors.END}\n"
         else:
-            output += f"{colors.OKGREEN}\t\t{basename(file)} success! ✓{colors.END}\n"
+            if( retval == 0 ):
+                output += f"{colors.FAIL}\t\t{basename(file)} returned 0 but expected failure ✗{colors.END}\n"
+            else:
+                output += f"{colors.OKGREEN}\t\t{basename(file)} failed succesfully! ✓{colors.END}\n"
+                      
 
         passed = passed and ( retval == 0)
 
@@ -64,12 +71,14 @@ def test_folder(folder_path:str,*flags) -> str:
 
 
 def main():
-    test_locations = ["tests/list_tests","tests/str_tests","tests/object_tests"]
+    test_locations = ["tests/list_tests","tests/str_tests","tests/object_tests","tests/fail_tests"]
+    checks = [True,True,True,False]
+    expected_to_pass  = [True,True,True,False]
 
     final_output = ""
-    for location in test_locations:
+    for location,check,expected in zip(test_locations,checks,expected_to_pass):
         final_output += "\n"
-        final_output += test_folder(join(getcwd(),location))
+        final_output += test_folder(join(getcwd(),location),check,expected)
 
     print(final_output)
 

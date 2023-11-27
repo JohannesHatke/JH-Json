@@ -403,11 +403,13 @@ json_val *parse_list(char **after){
 
 		if (**after != ']') //without we try to parse ] as val
 			tmp = parse_val(after);
-		else 
+		else {
+			failed =1;
 			break;
+		}
 
 		if (tmp == NULL){
-			failed = 1;
+			failed = 1; //encountered , at end of list
 			break;
 		}
 		AL_append(al,tmp);
@@ -678,6 +680,8 @@ json_val *parse_json_from_str(char *s){
 	if ((output = parse_val(str)) == NULL){
 		json_err(before,*str);
 	}
+	printf("3%s\n",before);
+	printf("3%s\n",*str);
 	free(str);
 	return output;
 }
@@ -737,11 +741,11 @@ int main(int argc, char **argv){
 
 
 	//In seperate branch:
-	// - (1) do proper error checking
 	// - (2) add objects (using general structure of parse_list
 	//	- add tests
 	// - (3) add README and proper documentation
 	// - (4) add wrappers to get and set data
+	// - (5) improve error checking (it gets the line right but not the char usually in messages)
 	
 	
 
