@@ -3,6 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "ArrayList/ArrayList.h"
+#include "HashTable/HashTable.h"
 #include "UTF8/utf8.h"
 
 #define MAX_SAFE_STR 100
@@ -18,123 +19,73 @@ void die(){
 
 /* Data Structures: */
 
+typedef struct json_val{
+	void *data;
+	int type;
+}json_val;
+
 /* Hash Table */
 
-/*
- * using dbj2 but reducing value significantly, only fast for few values
- */
-#define HASHSIZE 20
-
-typedef struct hash_obj{
-	char *name;
-	void *val;
-	struct hash_obj* next;
-}hash_obj;
-
-int hash(char *str){
-	unsigned long hash = 5381;
-	int c;
-	while ((c = *str++)!='\0')
-		hash = ((hash << 5)+hash) + c;
-
-	return hash % HASHSIZE;
-}
 
 
 
-/*
- * frees every name and value associated with the hash table and the table variable itself
- */
-int free_hash_table(hash_obj **table){
-	int i,count;
-	count = i = 0;
-	hash_obj *curr,*old;
-	for(i = 0; i< HASHSIZE; i++  ){
-		curr = table[i];
-		while(curr != NULL){
-			old = curr;
-			curr = curr->next;
-			free(old->val);
-			free(old->name);
-			free(old);
-			count++;
-		}
+typedef struct json_obj{
+	char *key;
+	json_val *val;
+}json_obj;
+#define JSON_HASH_SIZE 30
+
+int json_hash_func(void *a){
+	if (a == NULL){
+		fprintf(stderr,"hash obj Error, NULL encountered\n");
+		return -1;
 	}
-	free(table);
-	return count;
-}
+	json_obj *ja = (json_obj*) a;
 
-
-int hash_foreach( hash_obj **table,  void (*fp) (hash_obj*, int) ){
-	int i,count;
-	count = i = 0;
-	hash_obj *curr,*old;
-	for(i = 0; i< HASHSIZE; i++  ){
-		curr = table[i];
-		while(curr != NULL){
-			old = curr;
-			curr = curr->next;
-			(*fp)(old,count);
-			count++;
-		}
-	}
-	free(table);
-	return count;
-}
-
-
-hash_obj **init_hash_table(){
-	hash_obj **table = malloc(HASHSIZE * sizeof(hash_obj*));
-	for(int i =0; i< HASHSIZE; i++){
-		*(table + i) = NULL;
-	}
-	return table;
-}
-
-hash_obj *lookup(hash_obj **table, char *s){
-	hash_obj *curr;
-	for(curr = table[hash(s)]; curr != NULL 
-	&&  strncmp(s,curr->name,MAX_SAFE_STR) != 0  ; curr = curr->next)
-		;
-	return curr;
-}
-
-/*
- * name and val have to be malloced outside of this function
- */
-hash_obj *init_hash_obj(char *name, void *val){
-	hash_obj *p = malloc(sizeof(hash_obj));
-	p->next = NULL;
-	p->val = val;
-	p->name = name;
-	return p;
+	return ((ja->key)[0] % JSON_HASH_SIZE) ;
 
 }
 
-/*
- * name and val have to be malloced outside of this function
- * returns NULL on failure
- */
-hash_obj *install (hash_obj **table, char *name, void *val){
-	int hashval = hash(name);
-	hash_obj *curr = table[hashval];
-	if(curr == NULL){
-		table[hashval] = init_hash_obj(name, val);
-		return table[hashval];
+
+
+
+int json_obj_comp(void *a, void *b){
+	if ( a == NULL || b == NULL){
+		fprintf(stderr,"comparison Error, NULL encountered\n");
+		return 0;
 	}
 
-	for(curr = table[hashval]; curr->next != NULL && strncmp(name,curr->name,MAX_SAFE_STR) != 0; curr = curr->next)
-		;
-	if (strncmp(name,curr->name,MAX_SAFE_STR) == 0){
-		fprintf(stderr, "name %s is used twice in same hash table\n",	name);
-		return NULL;
-	}
+	json_obj *ja = (json_obj*) a;
+	json_obj *jb = (json_obj*) b;
 
-
-	curr->next = init_hash_obj(name, val);
-
-	return curr->next;
+	return !(strncmp(ja->key, jb->key, 10000));
 }
+
+void json_val_free(json_val *p);
+
+int free_json_obj(void *a){
+	if (a == NULL){
+		fprintf(stderr,"free obj Error, NULL encountered\n");
+		return 1;
+	}
+	json_obj *ja = (json_obj*) a;
+	free(ja->key);
+	json_val_free(ja->val);
+	free(a);
+	return 0;
+}
+
+
+
+
+#define HashTable_Json_init() HashTable_init(JSON_HASH_SIZE, &json_hash_func,&free_json_obj, &json_obj_comp)
+
+int print_json_obj(void *a){
+	json_obj *ja = a;
+	printf("%s : ?\n",ja->key);
+	return 0;
+}
+
 
 
 
@@ -193,10 +144,6 @@ enum lit_token {
 
 
 
-typedef struct json_val{
-	void *data;
-	int type;
-}json_val;
 
 
 
@@ -221,13 +168,6 @@ int err_val = JSON_NUM;
 /* Json_val methods for cleanup */
 
 void json_val_free(json_val *p);
-void hash_free_wrapper(hash_obj *obj, int pos){
-	json_val_free((json_val *)obj->val);
-}
-
-void free_hash_contents(hash_obj **table){
-	hash_foreach(table, &hash_free_wrapper);
-}
 
 void AL_free_wrapper(void *p, int pos){
 	json_val_free((json_val*) p);
@@ -250,8 +190,7 @@ void json_val_free(json_val *p){
 			free( (char*) p->data);
 		break;
 		case JSON_OBJ:
-			//hash_foreach((hash_obj**) p->data, &hash_free_wrapper);
-			free_hash_table( (hash_obj**) p->data);
+			HashTable_free((HashTable*) p->data);
 		break;
 		default:
 			fprintf(stderr,"trying to free an unsupported json value of type %d\n",p->type);
@@ -272,8 +211,7 @@ FILE *Out;
 #define TABSIZE 8
 
 void print_json_str(FILE *output, char *s){
-	int c;
-	fprintf(output,"\"");
+	int c; fprintf(output,"\"");
 	while (( c = *s++) != '\0' ){
 		switch(c){
 			case '"':
@@ -319,12 +257,17 @@ void print_AL_entry(void *p, int pos){
 	print_nesting(Out, Nesting);
 	print_json_val(Out,jv);
 }
-void print_hash_entry(hash_obj *p, int pos){
-	json_val *jv = (json_val*) p->val;
+
+int print_json_hash_entry(void *v,int pos){
+	json_obj *a = (json_obj*) v;
+
+	json_val *jv = a->val;
 	fprintf(Out,"%s\n",( pos != 0) ? "," : "");
+
 	print_nesting(Out, Nesting);
-	fprintf(Out,"%s\n",p->name);
+	fprintf(Out,"\"%s\":",a->key);
 	print_json_val(Out,jv);
+	return 0;
 }
 
 void print_json_val(FILE *output, json_val *jv){
@@ -358,12 +301,7 @@ void print_json_val(FILE *output, json_val *jv){
 			fprintf(output,"{");
 			Nesting++;
 
-			hash_obj **table = (hash_obj **) jv->data;
-			if ( hash_foreach(table,&print_hash_entry) == 0){
-				Nesting--;
-				fprintf(output,"}");
-				break;
-			}
+			Hash_foreach((HashTable*) jv->data, &print_json_hash_entry);
 
 			Nesting--;
 			fprintf(output,"\n");
@@ -400,7 +338,7 @@ json_val *parse_object(char **after){
 	json_val *output, *val= NULL;
 	char *key = NULL;
 	int iteration = 0;
-	hash_obj **table = init_hash_table();
+	HashTable *object_table = HashTable_Json_init();
 
 
 
@@ -414,14 +352,14 @@ json_val *parse_object(char **after){
 		}
 
 		if( key == NULL){
-			free_hash_table(table);
+			HashTable_free(object_table);
 			return NULL;
 		}
 
 		skipwhitespace(after);
 		if (**after != ':'){
 			free(key);
-			free_hash_table(table);
+			HashTable_free(object_table);
 			return NULL;
 		}
 		(*after)++;
@@ -430,29 +368,31 @@ json_val *parse_object(char **after){
 		val = parse_val(after);
 		if (val == NULL){
 			free(key);
-			free_hash_table(table);
+			HashTable_free(object_table);
 			return NULL;
 		}
 
-		//add to hashlist
-		install(table, key ,(void*) val);
+		//add to list
+		json_obj *new = malloc(sizeof(json_obj));
+		new->key = key;
+		new->val = val;
+		Hash_install(object_table,new);
 
 		skipwhitespace(after);
 		if (**after == ',')
 			(*after)++;
-		else if (**after == '}')
+		else if (**after == '}'){
+			(*after)++;
 			break;
-		else {
-			free(val);
-			free(key);
-			free_hash_table(table);
+		} else {
+			HashTable_free(object_table);
 			return NULL;
 		}
 		
 
 	}
 	output = (json_val*) malloc(sizeof(json_val));
-	output->data = (void*) table;
+	output->data = (void*) object_table;
 	output->type = JSON_OBJ;
 	return output;
 
@@ -863,5 +803,3 @@ int main(int argc, char **argv){
 	// - (5) improve error checking (it gets the line right but not the char usually in messages)
 	
 	
-
-

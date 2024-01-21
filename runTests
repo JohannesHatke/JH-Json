@@ -67,6 +67,26 @@ def test_folder(folder_path:str,*flags) -> str:
 
     return heading +"\n"+ output
 
+def test_leaks(folder_path:str) -> str:
+    output = ""
+    passed = True 
+    test_files =[join(folder_path,x) for x in listdir(folder_path)
+                 if ( isfile(join(folder_path,x)) )]
+    heading = f"{colors.BOLD}{colors.UNDERLINE}Leaks in: {colors.END} {folder_path}"
+    
+    count = 0
+    for file in test_files:
+        print(f"\n{colors.HEADER}testing {file} {colors.END}")
+        retval = system("valgrind --error-exitcode=10 ./build/main "+ file)
+
+        if( retval == 10 ):
+            output += f"{colors.FAIL}\t\t{basename(file)} Leaks found   ✗{colors.END}\n"
+        else:
+            output += f"{colors.OKGREEN}\t\t{basename(file)} 0 leaks! ✓{colors.END}\n"
+
+
+    return heading +"\n"+ output
+
 
 
 
@@ -79,6 +99,12 @@ def main():
     for location,check,expected in zip(test_locations,checks,expected_to_pass):
         final_output += "\n"
         final_output += test_folder(join(getcwd(),location),check,expected)
+
+    final_output += f"\n{colors.HEADER}LEAK-CHECK{colors.END}"
+    for location in test_locations:
+        final_output += "\n"
+        final_output += test_leaks(location)
+
 
     print(final_output)
 
