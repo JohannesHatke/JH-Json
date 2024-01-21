@@ -84,5 +84,9 @@ def main():
 
 
 if __name__ =="__main__":
-    main()
+    if len(argv) == 1:
+        main()
+    else:
+        print(isvalid(argv[1]))
+
 

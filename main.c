@@ -40,6 +40,8 @@ int hash(char *str){
 	return hash % HASHSIZE;
 }
 
+
+
 /*
  * frees every name and value associated with the hash table and the table variable itself
  */
@@ -61,6 +63,25 @@ int free_hash_table(hash_obj **table){
 	free(table);
 	return count;
 }
+
+
+int hash_foreach( hash_obj **table,  void (*fp) (hash_obj*, int) ){
+	int i,count;
+	count = i = 0;
+	hash_obj *curr,*old;
+	for(i = 0; i< HASHSIZE; i++  ){
+		curr = table[i];
+		while(curr != NULL){
+			old = curr;
+			curr = curr->next;
+			(*fp)(old,count);
+			count++;
+		}
+	}
+	free(table);
+	return count;
+}
+
 
 hash_obj **init_hash_table(){
 	hash_obj **table = malloc(HASHSIZE * sizeof(hash_obj*));
@@ -178,12 +199,6 @@ typedef struct json_val{
 }json_val;
 
 
-typedef struct json_obj{
-	char *key;
-	json_val *val;
-
-}json_obj;
-
 
 
 #define KEY 10;
@@ -206,6 +221,13 @@ int err_val = JSON_NUM;
 /* Json_val methods for cleanup */
 
 void json_val_free(json_val *p);
+void hash_free_wrapper(hash_obj *obj, int pos){
+	json_val_free((json_val *)obj->val);
+}
+
+void free_hash_contents(hash_obj **table){
+	hash_foreach(table, &hash_free_wrapper);
+}
 
 void AL_free_wrapper(void *p, int pos){
 	json_val_free((json_val*) p);
@@ -226,6 +248,10 @@ void json_val_free(json_val *p){
 		break;
 		case JSON_LITERAL:
 			free( (char*) p->data);
+		break;
+		case JSON_OBJ:
+			//hash_foreach((hash_obj**) p->data, &hash_free_wrapper);
+			free_hash_table( (hash_obj**) p->data);
 		break;
 		default:
 			fprintf(stderr,"trying to free an unsupported json value of type %d\n",p->type);
@@ -287,10 +313,17 @@ void print_nesting(FILE *output, int n){
 		fprintf(output,"\t");
 }
 
-void print_entry(void *p, int pos){
+void print_AL_entry(void *p, int pos){
 	json_val *jv = (json_val*) p;
 	fprintf(Out,"%s\n",( pos != 0) ? "," : "");
 	print_nesting(Out, Nesting);
+	print_json_val(Out,jv);
+}
+void print_hash_entry(hash_obj *p, int pos){
+	json_val *jv = (json_val*) p->val;
+	fprintf(Out,"%s\n",( pos != 0) ? "," : "");
+	print_nesting(Out, Nesting);
+	fprintf(Out,"%s\n",p->name);
 	print_json_val(Out,jv);
 }
 
@@ -310,7 +343,7 @@ void print_json_val(FILE *output, json_val *jv){
 			Nesting++;
 
 			ArrayList *ls = jv->data;
-			if ( AL_foreach(ls,&print_entry) == 0){
+			if ( AL_foreach(ls,&print_AL_entry) == 0){
 				Nesting--;
 				fprintf(output,"]");
 				break;
@@ -321,6 +354,23 @@ void print_json_val(FILE *output, json_val *jv){
 			print_nesting(Out, Nesting);
 			fprintf(output,"]");
 		break;
+		case JSON_OBJ:
+			fprintf(output,"{");
+			Nesting++;
+
+			hash_obj **table = (hash_obj **) jv->data;
+			if ( hash_foreach(table,&print_hash_entry) == 0){
+				Nesting--;
+				fprintf(output,"}");
+				break;
+			}
+
+			Nesting--;
+			fprintf(output,"\n");
+			print_nesting(Out, Nesting);
+			fprintf(output,"}");
+		break;
+		//TODO json_obj
 		default:
 			fprintf(output,"unknown\n");
 		break;
@@ -341,9 +391,71 @@ void fprint_json(FILE *output, json_val *jv){
 json_val *parse_val(char **after);
 json_val *parse_object(char **after);
 json_val *parse_literal(char **after);
+
+
+
+char *read_str(char **p);
 json_val *parse_object(char **after){
 	err_val = JSON_OBJ;
-	return NULL;
+	json_val *output, *val= NULL;
+	char *key = NULL;
+	int iteration = 0;
+	hash_obj **table = init_hash_table();
+
+
+
+	while(**after != '\0' && **after != '}'){
+
+		skipwhitespace(after);
+		key = NULL;
+		if(**after == '"'){
+			(*after)++;
+			key = read_str(after);
+		}
+
+		if( key == NULL){
+			free_hash_table(table);
+			return NULL;
+		}
+
+		skipwhitespace(after);
+		if (**after != ':'){
+			free(key);
+			free_hash_table(table);
+			return NULL;
+		}
+		(*after)++;
+		skipwhitespace(after);
+		val = NULL;
+		val = parse_val(after);
+		if (val == NULL){
+			free(key);
+			free_hash_table(table);
+			return NULL;
+		}
+
+		//add to hashlist
+		install(table, key ,(void*) val);
+
+		skipwhitespace(after);
+		if (**after == ',')
+			(*after)++;
+		else if (**after == '}')
+			break;
+		else {
+			free(val);
+			free(key);
+			free_hash_table(table);
+			return NULL;
+		}
+		
+
+	}
+	output = (json_val*) malloc(sizeof(json_val));
+	output->data = (void*) table;
+	output->type = JSON_OBJ;
+	return output;
+
 }
 
 
@@ -395,7 +507,7 @@ json_val *parse_list(char **after){
 	skipwhitespace(after);
 	while ( **after != ']'){
 		if (**after != ',' && i != 0){
-			return NULL;
+			failed = 1;
 		}
 		skipwhitespace(after);
 		skipline(',');
@@ -520,6 +632,7 @@ char *read_str(char **p){
 	fail = 0;
 	sbuf *s = sbuf_init();
 	char *str,storage[2];
+	char *tmp;
 	storage[1] = '\0';
 	while( (c = (**p) ) != '\0' && !(c == '"' && !escaped)){
 		(*p)++;
@@ -561,7 +674,9 @@ char *read_str(char **p){
 						break;
 					}
 					*p = *p + 4;
-					sbuf_append(s,utf8_encode(unic));
+					tmp = utf8_encode(unic);
+					sbuf_append(s,tmp);
+					free(tmp);
 				break;
 				default:
 					//TODO write error (for now just skipping
