@@ -796,8 +796,6 @@ int main(int argc, char **argv){
 
 
 	//In seperate branch:
-	// - (2) add objects (using general structure of parse_list
-	//	- add tests
 	// - (3) add README and proper documentation
 	// - (4) add wrappers to get and set data
 	// - (5) improve error checking (it gets the line right but not the char usually in messages)
