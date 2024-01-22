@@ -91,9 +91,9 @@ def test_leaks(folder_path:str) -> str:
 
 
 def main():
-    test_locations = ["tests/list_tests","tests/str_tests","tests/object_tests","tests/fail_tests"]
-    checks = [True,True,True,False]
-    expected_to_pass  = [True,True,True,False]
+    test_locations = ["tests/list_tests","tests/str_tests","tests/object_tests","tests/fail_tests","tests/full_tests"]
+    checks = [True,True,True,False,True]
+    expected_to_pass  = [True,True,True,False,True]
 
     final_output = ""
     for location,check,expected in zip(test_locations,checks,expected_to_pass):
