@@ -119,21 +119,3 @@ void AL_free(ArrayList *al){
 }
 
 
-int AL_delete(ArrayList *al, int pos){
-	int *index1 = NULL;
-	int *index2 = NULL;
-	index1 = malloc(sizeof(int));
-	index2 = malloc(sizeof(int));
-	getIndex(al, pos, index1, index2);
-	if ( !index1 || !index2 || al->entries[*index1] == NULL
-		|| )
-		return 0;
-
-	void *todelete = al->entries[index1][index2];
-	al->entries[index1][index2] = NULL;
-
-
-	
-
-}
-

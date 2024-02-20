@@ -1,11 +1,17 @@
 CFLAGS= -Wall -Wextra -pedantic -O0 -g
 
-./build/main:build ./build/main.o ./build/utf8.o ./build/ArrayList.o ./build/HashTable.o
-	$(CC) $(CFLAGS)  ./build/utf8.o ./build/ArrayList.o ./build/HashTable.o  ./build/main.o -o ./build/main -lm
+lib: build ./build/JH_Json.o ./build/utf8.o ./build/ArrayList.o ./build/HashTable.o 
+	mkdir lib
+	cp ./build/JH_Json.o ./lib/
+	cp ./JH_Json.h ./lib/
+
+tests: build ./build/JH_Json.o ./build/utf8.o ./build/ArrayList.o ./build/HashTable.o tests.c
+	$(CC) $(CFLAGS)  ./build/utf8.o ./build/ArrayList.o ./build/HashTable.o  ./build/JH_Json.o tests.c -o ./build/main -lm
+
 ./build: 
 	mkdir build
-./build/main.o: ./build main.c
-	$(CC) $(CFLAGS) -c -o ./build/main.o main.c
+./build/JH_Json.o: ./build JH_Json.c
+	$(CC) $(CFLAGS) -c -o ./build/JH_Json.o JH_Json.c
 ./build/utf8.o: ./build ./UTF8/utf8.c
 	# no warnings because overflow is intended
 	$(CC) -g -c -o ./build/utf8.o ./UTF8/utf8.c
@@ -16,3 +22,4 @@ CFLAGS= -Wall -Wextra -pedantic -O0 -g
 
 clean: 
 	rm -r ./build
+	rm -r ./lib

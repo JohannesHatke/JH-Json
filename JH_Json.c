@@ -5,6 +5,7 @@
 #include "ArrayList/ArrayList.h"
 #include "HashTable/HashTable.h"
 #include "UTF8/utf8.h"
+#include "JH_Json.h"
 
 #define MAX_SAFE_STR 100
 #define MAXLINE 1000
@@ -17,12 +18,6 @@ void die(){
 	exit(1);
 }
 
-/* Data Structures: */
-
-typedef struct json_val{
-	void *data;
-	int type;
-}json_val;
 
 /* Hash Table */
 
@@ -136,38 +131,12 @@ void skipwhitespace( char **p){
 
 /* JSON Part */
 
-enum lit_token {
-	JSON_NULL = -1,
-	JSON_FALSE,
-	JSON_TRUE
-};
-
-
-
-
-
-
-
-#define KEY 10;
-#define VAL 11;
-
-enum val_type {
-	JSON_NUM = 2000,
-	JSON_CHAR,
-	JSON_STR,
-	JSON_OBJ,
-	JSON_LITERAL,
-	JSON_LIST,
-	JSON_VAL //just for error checking
-
-};
 
 int err_val = JSON_NUM;
 
 
 /* Json_val methods for cleanup */
 
-void json_val_free(json_val *p);
 
 void AL_free_wrapper(void *p, int pos){
 	json_val_free((json_val*) p);
@@ -866,36 +835,3 @@ json_val *json_list_get(json_val *arr, int index){
 
 // TODO: restructure ArrayList so values can be deleted without shifting everything
 
-
-
-
-
-
-// general test setup:
-int main(int argc, char **argv){
-	// freopen("/dev/null", "w", stderr);
-
-	if( argc < 2){
-		printf("no args\n"); 
-		return 1;
-	}
-	
-	json_val *test = parse_json_file(argv[1]);
-	if (test == NULL)
-		return 2;
-	fprintf(stderr,"----\nparsed: \n");
-	fprint_json(stderr,test);
-	json_val_free(test);
-
-	return 0;
-}
-
-
-
-	//In seperate branch:
-	// - (3) add wrappers to get and set data
-	// - (4) add README and proper documentation
-	// - (5) improve sbuf (to be faster with large files), Arraylist and
-	// - (6) improve error checking (it gets the line right but not the char usually in messages)
-	
-	
