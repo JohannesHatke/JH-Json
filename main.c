@@ -773,13 +773,110 @@ json_val *parse_json_file(char *filename){
 }
 
 
+// json-wrappers
+
+
+
+
+// dictionaries:
+
+/*
+* gets the value from the dictionary
+* returns NULL if error occurs or the value could not be found 
+*/
+json_val* json_dict_get(json_val *dict, char *key){
+	if (dict->type != JSON_OBJ){
+		fprintf(stderr, "json: dict-get: called object is not a dictionary\n");
+		return NULL;
+	}
+	return Hash_get((HashTable*) dict->data, (char *) key);
+}
+
+/*
+* deletes the value from the dictionary
+* returns non-zero if value was found
+*/
+int json_dict_delete(json_val *dict, char *key){
+	if (dict->type != JSON_OBJ){
+		fprintf(stderr, "json: dict-delete: called object is not a dictionary\n");
+		return 0;
+	}
+	return Hash_remove((HashTable*) dict->data, (char *) key);
+}
+
+/*
+* removes the value from the dictionary and returns it
+* returns NULL if not found
+*/
+json_val *json_dict_pop(json_val *dict, char *key){
+	if (dict->type != JSON_OBJ){
+		fprintf(stderr, "json: dict-pop: called object is not a dictionary\n");
+		return 0;
+	}
+	return Hash_remove_get((HashTable*) dict->data, (char *) key);
+}
+
+/*
+* sets the value
+* returns:
+*	0 if an error occurs
+*	1 if there was no  previous value with the key
+*	2 if there was a previous value with the key
+*/
+int json_dict_set(json_val *dict, char *key, json_val *val){
+	if (dict->type != JSON_OBJ){
+		fprintf(stderr, "json: dict-set: called object is not a dictionary\n");
+		return 0;
+	}
+	if (val == NULL || key == NULL ){
+		fprintf(stderr, "json: dict-set: parameters are NULL. Use JSON_NULL \n");
+		return 0;
+	}
+
+	int found = Hash_remove((HashTable*) dict->data, (char *) key);
+	Hash_install((HashTable*) dict->data, (char *) key);
+	return found + 1;
+}
+
+// List
+
+int json_list_set(json_val *arr, int index, json_val *val){
+	if (arr->type != JSON_LIST){
+		fprintf(stderr, "json: list-set: called on json object, that is not a list\n");
+		return 0;
+	}
+	if (val == NULL || index < 0 ){
+		fprintf(stderr, "json: list-set: wrong index or value\n");
+		return 0;
+	}
+	AL_set( (ArrayList*) arr, index, val);
+	return 1;
+}
+json_val *json_list_get(json_val *arr, int index){
+	if (arr->type != JSON_LIST){
+		fprintf(stderr, "json: list-get: called on json object, that is not a list\n");
+		return NULL;
+	}
+	if (index < 0 ){
+		fprintf(stderr, "json: list-get: wrong index\n");
+		return NULL;
+	}
+	return AL_get( (ArrayList*) arr, index);
+}
+
+// TODO: restructure ArrayList so values can be deleted without shifting everything
+
+
+
+
+
 
 // general test setup:
 int main(int argc, char **argv){
 	// freopen("/dev/null", "w", stderr);
 
 	if( argc < 2){
-		printf("no args\n");
+		printf("no args\n"); 
 		return 1;
 	}
 	
@@ -796,8 +893,9 @@ int main(int argc, char **argv){
 
 
 	//In seperate branch:
-	// - (3) add README and proper documentation
-	// - (4) add wrappers to get and set data
-	// - (5) improve error checking (it gets the line right but not the char usually in messages)
+	// - (3) add wrappers to get and set data
+	// - (4) add README and proper documentation
+	// - (5) improve sbuf (to be faster with large files), Arraylist and
+	// - (6) improve error checking (it gets the line right but not the char usually in messages)
 	
 	
