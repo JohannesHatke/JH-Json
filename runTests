@@ -45,7 +45,7 @@ def test_folder(folder_path:str,*flags) -> str:
             print(f"{colors.WARNING}\tis not valid json,skipping{colors.END}")
             continue;
         count += 1
-        retval = system("./build/main " + file)
+        retval = system("./build/tests " + file)
         print(f"{colors.BOLD}\texited with signal {retval} {colors.END}")
 
         if expect_to_pass:
@@ -77,7 +77,7 @@ def test_leaks(folder_path:str) -> str:
     count = 0
     for file in test_files:
         print(f"\n{colors.HEADER}testing {file} {colors.END}")
-        retval = system("valgrind --error-exitcode=10 ./build/main "+ file)
+        retval = system("valgrind --error-exitcode=10 ./build/tests "+ file)
 
         if( retval == 10 ):
             output += f"{colors.FAIL}\t\t{basename(file)} Leaks found   ✗{colors.END}\n"

@@ -6,7 +6,7 @@ lib: build ./build/JH_Json.o ./build/utf8.o ./build/ArrayList.o ./build/HashTabl
 	cp ./JH_Json.h ./lib/
 
 tests: build ./build/JH_Json.o ./build/utf8.o ./build/ArrayList.o ./build/HashTable.o tests.c
-	$(CC) $(CFLAGS)  ./build/utf8.o ./build/ArrayList.o ./build/HashTable.o  ./build/JH_Json.o tests.c -o ./build/main -lm
+	$(CC) $(CFLAGS)  ./build/utf8.o ./build/ArrayList.o ./build/HashTable.o  ./build/JH_Json.o tests.c -o ./build/tests -lm
 
 ./build: 
 	mkdir build
