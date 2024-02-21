@@ -13,8 +13,8 @@ int main(int argc, char **argv){
 	json_val *test = parse_json_file(argv[1]);
 	if (test == NULL)
 		return 2;
-	fprintf(stderr,"----\nparsed: \n");
-	fprint_json(stderr,test);
+	//fprintf(stderr,"----\nparsed: \n");
+	//fprint_json(stderr,test);
 	json_val_free(test);
 
 	return 0;

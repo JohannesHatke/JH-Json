@@ -277,7 +277,6 @@ void print_json_val(FILE *output, json_val *jv){
 			print_nesting(Out, Nesting);
 			fprintf(output,"}");
 		break;
-		//TODO json_obj
 		default:
 			fprintf(output,"unknown\n");
 		break;
@@ -308,6 +307,14 @@ json_val *parse_object(char **after){
 	char *key = NULL;
 	int iteration = 0;
 	HashTable *object_table = HashTable_Json_init();
+
+	if(**after == '}'){
+		output = malloc(sizeof(json_val));
+		output->type = JSON_OBJ;
+		output->data = object_table;
+		(*after)++;
+		return output;
+	}
 
 
 
@@ -341,7 +348,7 @@ json_val *parse_object(char **after){
 			return NULL;
 		}
 
-		//add to list
+		//add to table
 		json_obj *new = malloc(sizeof(json_obj));
 		new->key = key;
 		new->val = val;
@@ -360,6 +367,7 @@ json_val *parse_object(char **after){
 		
 
 	}
+
 	output = (json_val*) malloc(sizeof(json_val));
 	output->data = (void*) object_table;
 	output->type = JSON_OBJ;
@@ -702,10 +710,9 @@ json_val *parse_json_from_str(char *s){
 	char *before = *str;
 	json_val *output;
 	if ((output = parse_val(str)) == NULL){
+		printf("\n\n\t%.5s\n\n",*str);
 		json_err(before,*str);
 	}
-	printf("3%s\n",before);
-	printf("3%s\n",*str);
 	free(str);
 	return output;
 }
@@ -713,22 +720,26 @@ json_val *parse_json_from_str(char *s){
 
 json_val *parse_json_file(char *filename){
 	json_val *output;
-	char *line = (char*) malloc(sizeof(char) * MAXLINE);
+	char *buf;  
 
 	FILE *input = fopen(filename,"r");
 	if (input == NULL){
 		fprintf(stderr,"cant find file %s\n",filename);
-		free(line);
+		free(buf);
 		return NULL;
 	}
 
+	/* SEEK_END is not guaranteed */
+
+	#ifndef SEEK_END 
+	buf  = (char*) malloc(sizeof(char) * MAXLINE);
 	sbuf *sb = sbuf_init();
 
 	//TODO: improve to allow infinite line length using sbuf
-	while ( fgets(line, MAXLINE, input) != NULL){
-		if (line_is_empty(line))
+	while ( fgets(buf, MAXLINE, input) != NULL){
+		if (line_is_empty(buf))
 			continue;
-		sbuf_append(sb, line);
+		sbuf_append(sb, buf);
 		
 	}
 	fprintf(stderr,"file input read:\n%s",sb->str);
@@ -736,7 +747,31 @@ json_val *parse_json_file(char *filename){
 	fprintf(stderr,"begin parsing\n");
 	output = parse_json_from_str(sb->str);
 	sbuf_free(sb);
-	free(line);
+	free(buf);
+
+	#else 
+
+	fseek(input, 0, SEEK_END);
+	int length = ftell(input) +1;
+	fseek(input, 0, SEEK_SET);
+	if (length < 0){
+		fprintf(stderr,"Error getting file length of %s\n",filename);
+		return NULL;
+	}
+	buf = malloc(length);
+	if ( buf == NULL ){
+		fprintf(stderr,"Memory Error");
+		return NULL;
+	}
+	if (  fread(buf, 1,length, input) < 0 ){
+		fprintf(stderr,"Error reading file");
+		free(buf);
+		return NULL;
+	}
+	buf[length-1]='\0';
+	output = parse_json_from_str(buf);
+	free(buf);
+	#endif /* ifndef SEEK_END  */
 	fclose(input);
 	return output;
 }
