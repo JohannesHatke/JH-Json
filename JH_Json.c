@@ -172,7 +172,7 @@ void json_val_free(json_val *p){
 /* Json Printing */
 
 
-void fprint_json(FILE *output, json_val* jv);
+void json_fprintf(FILE *output, json_val* jv);
 void print_json_val(FILE *output, json_val *jv);
 
 int Nesting = 0; /* TODO: remove global variables*/
@@ -284,7 +284,7 @@ void print_json_val(FILE *output, json_val *jv){
 }
 
 
-void fprint_json(FILE *output, json_val *jv){
+void json_fprintf(FILE *output, json_val *jv){
 	Out = output;
 	Nesting = 0;
 	print_json_val(output, jv);
@@ -704,7 +704,7 @@ void json_err(char *begin, char *end){
 	fprintf(stderr,"%s",err_msg);
 }
 
-json_val *parse_json_from_str(char *s){
+json_val *json_read_str(char *s){
 	char **str = malloc(sizeof(char*));
 	*str = s;
 	char *before = *str;
@@ -718,7 +718,7 @@ json_val *parse_json_from_str(char *s){
 }
 
 
-json_val *parse_json_file(char *filename){
+json_val *json_read_file(char *filename){
 	json_val *output;
 	char *buf;  
 
@@ -745,7 +745,7 @@ json_val *parse_json_file(char *filename){
 	fprintf(stderr,"file input read:\n%s",sb->str);
 
 	fprintf(stderr,"begin parsing\n");
-	output = parse_json_from_str(sb->str);
+	output = json_read_str(sb->str);
 	sbuf_free(sb);
 	free(buf);
 
@@ -769,7 +769,7 @@ json_val *parse_json_file(char *filename){
 		return NULL;
 	}
 	buf[length-1]='\0';
-	output = parse_json_from_str(buf);
+	output = json_read_str(buf);
 	free(buf);
 	#endif /* ifndef SEEK_END  */
 	fclose(input);

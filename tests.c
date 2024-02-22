@@ -10,11 +10,14 @@ int main(int argc, char **argv){
 		return 1;
 	}
 	
-	json_val *test = parse_json_file(argv[1]);
-	if (test == NULL)
+	json_val *test = json_read_file(argv[1]);
+	if (test == NULL){
+		printf("failure\n"); 
 		return 2;
+	}
 	//fprintf(stderr,"----\nparsed: \n");
-	//fprint_json(stderr,test);
+	//fprintf_json(stderr,test);
+	printf("success\n"); 
 	json_val_free(test);
 
 	return 0;

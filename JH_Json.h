@@ -10,13 +10,13 @@ typedef struct json_val{
 void json_val_free(json_val *p);
 
 
-enum lit_token {
+enum {
 	JSON_NULL = -1,
 	JSON_FALSE,
 	JSON_TRUE
 };
 
-enum val_type {
+enum {
 	JSON_NUM = 2000,
 	JSON_CHAR,
 	JSON_STR,
@@ -31,14 +31,13 @@ enum val_type {
 
 
 
-void fprint_json(FILE *output, json_val* jv);
+void json_fprintf(FILE *output, json_val* jv);
 
-#define printf_json(k) fprintf_json(stdout,k)
+#define json_printf(k) fprintf_json(stdout,k)
 
 
-json_val *parse_json_from_str(char *s);
-
-json_val *parse_json_file(char *filename);
+json_val *json_read_file(char *filename);
+json_val *json_read_str(char *filename);
 
 // json-wrappers
 
