@@ -1,7 +1,6 @@
 #ifndef JH_JSON
 #define JH_JSON
 
-
 typedef struct json_val{
 	void *data;
 	int type;
@@ -9,13 +8,11 @@ typedef struct json_val{
 
 void json_val_free(json_val *p);
 
-
 enum {
 	JSON_NULL = -1,
 	JSON_FALSE,
 	JSON_TRUE
 };
-
 enum {
 	JSON_NUM = 2000,
 	JSON_STR,
@@ -25,10 +22,6 @@ enum {
 	JSON_VAL //just for error checking
 
 };
-
-/* Json_val methods for cleanup */
-
-
 
 void json_fprintf(FILE *output, json_val* jv);
 
@@ -73,11 +66,13 @@ json_val *json_dict_pop(json_val *dict, char *key);
 int json_dict_set(json_val *dict, char *key, json_val *val);
 // List
 
+
+
 int json_list_set(json_val *arr, int index, json_val *val);
 
 json_val *json_list_get(json_val *arr, int index);
 
+json_val *json_val_create(int type, void *value);
 
-// TODO: restructure ArrayList so values can be deleted without shifting everything
 
 #endif
