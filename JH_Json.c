@@ -149,14 +149,13 @@ void json_val_free(json_val *p){
 			AL_free((ArrayList*) p->data);
 		break;
 		case JSON_NUM:
-			free( (int*) p->data);
+			free( (float*) p->data);
 		break;
 		case JSON_STR:
-		case JSON_CHAR:
 			free( (char*) p->data);
 		break;
 		case JSON_LITERAL:
-			free( (char*) p->data);
+			free( (int*) p->data);
 		break;
 		case JSON_OBJ:
 			HashTable_free((HashTable*) p->data);
@@ -866,6 +865,46 @@ json_val *json_list_get(json_val *arr, int index){
 		return NULL;
 	}
 	return AL_get( (ArrayList*) arr, index);
+}
+
+json_val *json_val_create(int type, void *value){
+	json_val *output = malloc(sizeof(json_val));
+	if (!output)
+		return NULL;
+	if ((type == JSON_LIST || JSON_OBJ ) && value != NULL){
+		return NULL;
+	}
+	switch (type) {
+		case JSON_NUM:
+			output->data = malloc(sizeof(float));
+			*((float*) output->data) = *((float*) value);
+		break;
+		case JSON_LITERAL:
+			output->data = malloc(sizeof(int));
+			if (value == NULL){
+				*((int*) output->data) = JSON_NULL;
+			} else if (value == 0){
+				*((int*) output->data) = JSON_FALSE;
+			} else {
+				*((int*) output->data) = JSON_TRUE;
+			}
+		break;
+		case JSON_STR:
+			output->data = value;
+		break;
+		case JSON_LIST:
+			output->data = AL_init(10);
+		break;
+		case JSON_OBJ:
+			output->data = HashTable_Json_init();
+		break;
+		default:
+			free(output);
+			return NULL;
+		break;
+	}
+	output->type = type;
+	return output;
 }
 
 // TODO: restructure ArrayList so values can be deleted without shifting everything

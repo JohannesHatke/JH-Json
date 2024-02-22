@@ -18,10 +18,9 @@ enum {
 
 enum {
 	JSON_NUM = 2000,
-	JSON_CHAR,
 	JSON_STR,
-	JSON_OBJ,
 	JSON_LITERAL,
+	JSON_OBJ,
 	JSON_LIST,
 	JSON_VAL //just for error checking
 
