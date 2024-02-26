@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "JH_Json.h"
+#include "../JH_Json.h"
 
 // general test setup:
 int main(int argc, char **argv){
