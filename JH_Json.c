@@ -711,6 +711,15 @@ json_val *json_read_str(char *s){
 	if ((output = parse_val(str)) == NULL){
 		printf("\n\n\t%.5s\n\n",*str);
 		json_err(before,*str);
+		free(str);
+		return output;
+	}
+	skipwhitespace(str);
+	if (**str != '\0'){ // checking 
+		json_err(before,*str);
+		free(str);
+		json_val_free((output));
+		return NULL;
 	}
 	free(str);
 	return output;
