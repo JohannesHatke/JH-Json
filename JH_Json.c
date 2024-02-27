@@ -7,7 +7,7 @@
 #include "UTF8/utf8.h"
 #include "JH_Json.h"
 
-#define MAX_SAFE_STR 100
+#define MAX_SAFE_STR 100000
 #define MAXLINE 1000
 
 // error handling
@@ -123,11 +123,10 @@ void sbuf_append(sbuf *buf, char *p){
 /*
 * skip whitespace
 */
-void skipwhitespace( char **p){
-	while( isspace(**p))
-		(*p)++;
-}
 
+#define skipwhitespace(p) \
+	while( isspace(**p)) \
+		(*p)++;
 
 /* JSON Part */
 

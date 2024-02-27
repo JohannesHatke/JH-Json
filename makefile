@@ -1,4 +1,4 @@
-CFLAGS= -Wall -Wextra -pedantic -O0 -g # -pg
+CFLAGS= -Wall -Wextra -pedantic  -O3 #-g -pg
 
 lib: build ./build/JH_Json.o ./build/utf8.o ./build/ArrayList.o ./build/HashTable.o 
 	mkdir lib
