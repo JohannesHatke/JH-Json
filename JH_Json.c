@@ -544,12 +544,12 @@ int four_digit_hex_to_int(char *p){
 * starts inside string already
 */
 char *read_str(char **p){
+	static char buf[100000];
 	int unic,fail,c,escaped = 0;
 	fail = 0;
-	sbuf *s = sbuf_init();
-	char *str,storage[2];
-	char *tmp;
-	storage[1] = '\0';
+	char *pb,*str,*tmp;
+	pb = &(buf[0]);
+
 	while( (c = (**p) ) != '\0' && !(c == '"' && !escaped)){
 		(*p)++;
 		if(!escaped &&  c == '\\'){
@@ -561,28 +561,28 @@ char *read_str(char **p){
 			escaped = 0;
 			switch(c){
 				case '"':
-					sbuf_append(s, "\"");
+					*pb++ = '\"';
 				break;
 				case '\\':
-					sbuf_append(s, "\\");
+					*pb++ = '\\';
 				break;
 				case '/':
-					sbuf_append(s, "/");
+					*pb++ = '/' ;
 				break;
 				case 'b':
-				       sbuf_append(s, "\b");
+					*pb++ = '\b';
 				break;
 				case 'f':
-				       sbuf_append(s, "\f");
+					*pb++ = '\f';
 				break;
 				case 'n':
-				       sbuf_append(s, "\n");
+					*pb++ = '\n';
 				break;
 				case 'r':
-				       sbuf_append(s, "\r");
+					*pb++ = '\r';
 				break;
 				case 't':
-					sbuf_append(s, "\t");
+					*pb++ = '\t';
 				break;
 				case 'u':
 					if ( (unic = four_digit_hex_to_int(*p)) < 0){
@@ -591,7 +591,9 @@ char *read_str(char **p){
 					}
 					*p = *p + 4;
 					tmp = utf8_encode(unic);
-					sbuf_append(s,tmp);
+					for (int i = 0; tmp[i] != '\0'; i++) {
+						*pb++ = tmp[i];
+					}
 					free(tmp);
 				break;
 				default:
@@ -599,19 +601,18 @@ char *read_str(char **p){
 				break;
 			}
 		} else {
-			storage[0] = c;
-			sbuf_append(s, storage);
+			*pb++ = c;
 		}
 	}
 	if (c != '"' || fail){
-		sbuf_free(s);
 		return NULL;
 	}
+	(*p)++;
+	*pb = '\0';
+
 	
 
-	(*p)++;
-	str = s->str;
-	free(s);
+	str = strdup(buf);
 	return str;
 }
 
