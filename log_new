@@ -1,0 +1,289 @@
+Flat profile:
+
+Each sample counts as 0.01 seconds.
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls  ms/call  ms/call  name    
+ 40.02      0.06     0.06  1031402     0.00     0.00  read_str
+ 26.68      0.10     0.04    88593     0.00     0.00  Hash_foreach
+ 13.34      0.12     0.02   416009     0.00     0.00  parse_str
+ 13.34      0.14     0.02                             Hash_comp_int
+  6.67      0.15     0.01    50649     0.00     0.00  parse_literal
+  0.00      0.15     0.00  4423917     0.00     0.00  print_json_str
+  0.00      0.15     0.00   637595     0.00     0.00  parse_val
+  0.00      0.15     0.00   615393     0.00     0.00  Hash_remove_get
+  0.00      0.15     0.00   615393     0.00     0.00  free_json_obj
+  0.00      0.15     0.00   615393     0.00     0.00  sbuf_append
+  0.00      0.15     0.00   246713     0.00     0.00  getIndex
+  0.00      0.15     0.00    88593     0.00     0.00  HashTable_free
+  0.00      0.15     0.00    88593     0.00     0.00  parse_object
+  0.00      0.15     0.00    75018     0.00     0.00  parse_num
+  0.00      0.15     0.00    44402     0.00     0.00  AL_set
+  0.00      0.15     0.00    22201     0.00     0.00  example_hash
+  0.00      0.15     0.00     7326     0.00     0.00  AL_foreach
+  0.00      0.15     0.00     7326     0.00     0.00  Hash_free_int
+  0.00      0.15     0.00     7326     0.00     0.00  parse_list
+  0.00      0.15     0.00        1     0.00     0.00  json_err
+  0.00      0.15     0.00        1     0.00   129.83  json_read_str
+
+ %         the percentage of the total running time of the
+time       program used by this function.
+
+cumulative a running sum of the number of seconds accounted
+ seconds   for by this function and those listed above it.
+
+ self      the number of seconds accounted for by this
+seconds    function alone.  This is the major sort for this
+           listing.
+
+calls      the number of times this function was invoked, if
+           this function is profiled, else blank.
+
+ self      the average number of milliseconds spent in this
+ms/call    function per call, if this function is profiled,
+	   else blank.
+
+ total     the average number of milliseconds spent in this
+ms/call    function and its descendents per call, if this
+	   function is profiled, else blank.
+
+name       the name of the function.  This is the minor sort
+           for this listing. The index shows the location of
+	   the function in the gprof listing. If the index is
+	   in parenthesis it shows where it would appear in
+	   the gprof listing if it were to be printed.
+
+Copyright (C) 2012-2023 Free Software Foundation, Inc.
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.
+
+		     Call graph (explanation follows)
+
+
+granularity: each sample hit covers 2 byte(s) for 6.66% of 0.15 seconds
+
+index % time    self  children    called     name
+                                                 <spontaneous>
+[1]     86.5    0.00    0.13                 main [1]
+                0.00    0.13       1/1           json_read_str [3]
+                0.00    0.00       1/3808524     print_json_str <cycle 1> [14]
+-----------------------------------------------
+[2]     86.5    0.00    0.13       1+733513  <cycle 2 as a whole> [2]
+                0.00    0.07  637595             parse_val <cycle 2> [4]
+                0.00    0.06   88593             parse_object <cycle 2> [6]
+                0.00    0.00    7326             parse_list <cycle 2> [12]
+-----------------------------------------------
+                0.00    0.13       1/1           main [1]
+[3]     86.5    0.00    0.13       1         json_read_str [3]
+                0.00    0.13       1/1           parse_val <cycle 2> [4]
+-----------------------------------------------
+                               22201             parse_list <cycle 2> [12]
+                              615393             parse_object <cycle 2> [6]
+                0.00    0.13       1/1           json_read_str [3]
+[4]     48.8    0.00    0.07  637595         parse_val <cycle 2> [4]
+                0.02    0.02  416009/416009      parse_str [7]
+                0.01    0.01   50649/50649       parse_literal [11]
+                0.01    0.00 1200172/3808524     print_json_str <cycle 1> [14]
+                0.00    0.00   75018/75018       parse_num [20]
+                               88593             parse_object <cycle 2> [6]
+                                7326             parse_list <cycle 2> [12]
+-----------------------------------------------
+                0.02    0.00  416009/1031402     parse_str [7]
+                0.04    0.00  615393/1031402     parse_object <cycle 2> [6]
+[5]     40.0    0.06    0.00 1031402         read_str [5]
+-----------------------------------------------
+                               88593             parse_val <cycle 2> [4]
+[6]     36.8    0.00    0.06   88593         parse_object <cycle 2> [6]
+                0.04    0.00  615393/1031402     read_str [5]
+                0.02    0.00 1846179/3808524     print_json_str <cycle 1> [14]
+                0.00    0.00   88593/88593       HashTable_free [19]
+                              615393             parse_val <cycle 2> [4]
+-----------------------------------------------
+                0.02    0.02  416009/416009      parse_val <cycle 2> [4]
+[7]     29.5    0.02    0.02  416009         parse_str [7]
+                0.02    0.00  416009/1031402     read_str [5]
+-----------------------------------------------
+[8]     26.7    0.04    0.00 3808524+1319379 <cycle 1 as a whole> [8]
+                0.04    0.00   88593             Hash_foreach <cycle 1> [9]
+                0.00    0.00 4423917+22201       print_json_str <cycle 1> [14]
+                0.00    0.00  615393             sbuf_append <cycle 1> [17]
+-----------------------------------------------
+                               88593             print_json_str <cycle 1> [14]
+[9]     26.7    0.04    0.00   88593         Hash_foreach <cycle 1> [9]
+                              615393             sbuf_append <cycle 1> [17]
+-----------------------------------------------
+                                                 <spontaneous>
+[10]    13.3    0.02    0.00                 Hash_comp_int [10]
+-----------------------------------------------
+                0.01    0.01   50649/50649       parse_val <cycle 2> [4]
+[11]    11.0    0.01    0.01   50649         parse_literal [11]
+                0.01    0.00  615393/3808524     print_json_str <cycle 1> [14]
+                0.00    0.00  615393/615393      Hash_remove_get [15]
+-----------------------------------------------
+                                7326             parse_val <cycle 2> [4]
+[12]     0.9    0.00    0.00    7326         parse_list <cycle 2> [12]
+                0.00    0.00  124578/3808524     print_json_str <cycle 1> [14]
+                0.00    0.00   22201/22201       example_hash [22]
+                0.00    0.00    7326/246713      getIndex [18]
+                               22201             parse_val <cycle 2> [4]
+-----------------------------------------------
+                                                 <spontaneous>
+[13]     0.2    0.00    0.00                 AL_free [13]
+                0.00    0.00   22201/3808524     print_json_str <cycle 1> [14]
+-----------------------------------------------
+                               22201             print_json_str <cycle 1> [14]
+                              615393             sbuf_append <cycle 1> [17]
+                0.00    0.00       1/3808524     main [1]
+                0.00    0.00   22201/3808524     AL_free [13]
+                0.00    0.00  124578/3808524     parse_list <cycle 2> [12]
+                0.01    0.00  615393/3808524     parse_literal [11]
+                0.01    0.00 1200172/3808524     parse_val <cycle 2> [4]
+                0.02    0.00 1846179/3808524     parse_object <cycle 2> [6]
+[14]     0.0    0.00    0.00 4423917+22201   print_json_str <cycle 1> [14]
+                0.00    0.00    7326/7326        AL_foreach [23]
+                0.00    0.00    7326/7326        Hash_free_int [24]
+                               88593             Hash_foreach <cycle 1> [9]
+                               22201             print_json_str <cycle 1> [14]
+-----------------------------------------------
+                0.00    0.00  615393/615393      parse_literal [11]
+[15]     0.0    0.00    0.00  615393         Hash_remove_get [15]
+                0.00    0.00  615393/615393      free_json_obj [16]
+-----------------------------------------------
+                0.00    0.00  615393/615393      Hash_remove_get [15]
+[16]     0.0    0.00    0.00  615393         free_json_obj [16]
+-----------------------------------------------
+                              615393             Hash_foreach <cycle 1> [9]
+[17]     0.0    0.00    0.00  615393         sbuf_append <cycle 1> [17]
+                              615393             print_json_str <cycle 1> [14]
+-----------------------------------------------
+                0.00    0.00    6419/246713      AL_get [28]
+                0.00    0.00    7326/246713      parse_list <cycle 2> [12]
+                0.00    0.00   22349/246713      AL_foreach [23]
+                0.00    0.00  210619/246713      AL_set [21]
+[18]     0.0    0.00    0.00  246713         getIndex [18]
+-----------------------------------------------
+                0.00    0.00   88593/88593       parse_object <cycle 2> [6]
+[19]     0.0    0.00    0.00   88593         HashTable_free [19]
+-----------------------------------------------
+                0.00    0.00   75018/75018       parse_val <cycle 2> [4]
+[20]     0.0    0.00    0.00   75018         parse_num [20]
+-----------------------------------------------
+                0.00    0.00   22201/44402       AL_get [28]
+                0.00    0.00   22201/44402       Hash_free_int [24]
+[21]     0.0    0.00    0.00   44402         AL_set [21]
+                0.00    0.00  210619/246713      getIndex [18]
+-----------------------------------------------
+                0.00    0.00   22201/22201       parse_list <cycle 2> [12]
+[22]     0.0    0.00    0.00   22201         example_hash [22]
+-----------------------------------------------
+                0.00    0.00    7326/7326        print_json_str <cycle 1> [14]
+[23]     0.0    0.00    0.00    7326         AL_foreach [23]
+                0.00    0.00   22349/246713      getIndex [18]
+-----------------------------------------------
+                0.00    0.00    7326/7326        print_json_str <cycle 1> [14]
+[24]     0.0    0.00    0.00    7326         Hash_free_int [24]
+                0.00    0.00   22201/44402       AL_set [21]
+-----------------------------------------------
+                0.00    0.00       1/1           json_read_file [50]
+[25]     0.0    0.00    0.00       1         json_err [25]
+-----------------------------------------------
+
+ This table describes the call tree of the program, and was sorted by
+ the total amount of time spent in each function and its children.
+
+ Each entry in this table consists of several lines.  The line with the
+ index number at the left hand margin lists the current function.
+ The lines above it list the functions that called this function,
+ and the lines below it list the functions this one called.
+ This line lists:
+     index	A unique number given to each element of the table.
+		Index numbers are sorted numerically.
+		The index number is printed next to every function name so
+		it is easier to look up where the function is in the table.
+
+     % time	This is the percentage of the `total' time that was spent
+		in this function and its children.  Note that due to
+		different viewpoints, functions excluded by options, etc,
+		these numbers will NOT add up to 100%.
+
+     self	This is the total amount of time spent in this function.
+
+     children	This is the total amount of time propagated into this
+		function by its children.
+
+     called	This is the number of times the function was called.
+		If the function called itself recursively, the number
+		only includes non-recursive calls, and is followed by
+		a `+' and the number of recursive calls.
+
+     name	The name of the current function.  The index number is
+		printed after it.  If the function is a member of a
+		cycle, the cycle number is printed between the
+		function's name and the index number.
+
+
+ For the function's parents, the fields have the following meanings:
+
+     self	This is the amount of time that was propagated directly
+		from the function into this parent.
+
+     children	This is the amount of time that was propagated from
+		the function's children into this parent.
+
+     called	This is the number of times this parent called the
+		function `/' the total number of times the function
+		was called.  Recursive calls to the function are not
+		included in the number after the `/'.
+
+     name	This is the name of the parent.  The parent's index
+		number is printed after it.  If the parent is a
+		member of a cycle, the cycle number is printed between
+		the name and the index number.
+
+ If the parents of the function cannot be determined, the word
+ `<spontaneous>' is printed in the `name' field, and all the other
+ fields are blank.
+
+ For the function's children, the fields have the following meanings:
+
+     self	This is the amount of time that was propagated directly
+		from the child into the function.
+
+     children	This is the amount of time that was propagated from the
+		child's children to the function.
+
+     called	This is the number of times the function called
+		this child `/' the total number of times the child
+		was called.  Recursive calls by the child are not
+		listed in the number after the `/'.
+
+     name	This is the name of the child.  The child's index
+		number is printed after it.  If the child is a
+		member of a cycle, the cycle number is printed
+		between the name and the index number.
+
+ If there are any cycles (circles) in the call graph, there is an
+ entry for the cycle-as-a-whole.  This entry shows who called the
+ cycle (as parents) and the members of the cycle (as children.)
+ The `+' recursive calls entry shows the number of function calls that
+ were internal to the cycle, and the calls entry for each member shows,
+ for that member, how many times it was called from other members of
+ the cycle.
+
+Copyright (C) 2012-2023 Free Software Foundation, Inc.
+
+Copying and distribution of this file, with or without modification,
+are permitted in any medium without royalty provided the copyright
+notice and this notice are preserved.
+
+Index by function name
+
+  [23] AL_foreach             [16] free_json_obj           [7] parse_str
+  [21] AL_set                 [18] getIndex                [4] parse_val
+  [19] HashTable_free         [25] json_err               [14] print_json_str
+  [10] Hash_comp_int           [3] json_read_str           [5] read_str
+   [9] Hash_foreach           [12] parse_list             [17] sbuf_append
+  [24] Hash_free_int          [11] parse_literal           [8] <cycle 1>
+  [15] Hash_remove_get        [20] parse_num               [2] <cycle 2>
+  [22] example_hash            [6] parse_object
