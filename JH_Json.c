@@ -543,13 +543,13 @@ int four_digit_hex_to_int(char *p){
 * starts inside string already
 */
 char *read_str(char **p){
-	static char buf[100000];
-	int unic,fail,c,escaped = 0;
-	fail = 0;
+	static char buf[MAX_SAFE_STR];
+	int count,unic,fail,c,escaped = 0;
+	count = fail = 0;
 	char *pb,*str,*tmp;
 	pb = &(buf[0]);
 
-	while( (c = (**p) ) != '\0' && !(c == '"' && !escaped)){
+	while(count++ < MAX_SAFE_STR - 6 && (c = (**p) ) != '\0' && !(c == '"' && !escaped)){
 		(*p)++;
 		if(!escaped &&  c == '\\'){
 			escaped = 1;
