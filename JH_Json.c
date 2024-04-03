@@ -366,6 +366,8 @@ json_val *parse_object(char **after){
 
 	}
 
+
+
 	output = (json_val*) malloc(sizeof(json_val));
 	output->data = (void*) object_table;
 	output->type = JSON_OBJ;
@@ -641,6 +643,8 @@ json_val *parse_val(char **after){
 			output = parse_str(after);
 		break;
 	}
+	if (!output && **after == '\0')
+		return NULL;
 
 	if (!output && strchr("-0123456789",**after) != NULL)
 		return parse_num(after);
