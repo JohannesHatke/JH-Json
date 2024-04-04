@@ -25,7 +25,7 @@ enum {
 
 void json_fprintf(FILE *output, json_val* jv);
 
-#define json_printf(k) fprintf_json(stdout,k)
+#define json_printf(k) json_fprintf(stdout,k)
 
 
 json_val *json_read_file(char *filename);
