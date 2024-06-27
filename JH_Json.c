@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include "ArrayList/ArrayList.h"
-#include "HashTable/HashTable.h"
-#include "UTF8/utf8.h"
+#include "ArrayList.h"
+#include "HashTable.h"
+#include "utf8.h"
 #include "JH_Json.h"
 
 #define MAX_SAFE_STR 100000
