@@ -61,7 +61,7 @@ if len(sys.argv) > 1:
         print("unknown option. only use --no-memcheck")
 
 memcheck = os.system("which valgrind") == 0
-bin_location = os.path.realpath(os.path.join(test_dir, "../build/tests"))
+bin_location = os.path.realpath(os.path.join(test_dir, "./test"))
 subdirs = ["fail_tests", "full_tests", "list_tests", "object_tests", "str_tests"]
 test_dirs = [os.path.join(os.path.dirname(os.path.realpath(__file__)), x) for x in subdirs]
 failures = []
