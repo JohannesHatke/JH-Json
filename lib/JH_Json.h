@@ -1,6 +1,10 @@
 #ifndef JH_JSON
 #define JH_JSON
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct json_val{
 	void *data;
 	int type;
@@ -74,5 +78,7 @@ json_val *json_list_get(json_val *arr, int index);
 
 json_val *json_val_create(int type, void *value);
 
-
+#ifdef __cplusplus
+}
+#endif
 #endif

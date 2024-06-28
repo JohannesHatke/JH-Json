@@ -1,6 +1,6 @@
 #build dir
 build/
-lib/
+.cache/
 
 # Prerequisites
 *.d

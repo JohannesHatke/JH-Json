@@ -1,5 +1,10 @@
 #ifndef ARRAYLIST_H
 #define ARRAYLIST_H
+
+#ifdef __cplusplus 
+extern "C" {
+#endif
+
 /*
  maximum Size (10^30) * startingSize
  */
@@ -52,4 +57,8 @@ void AL_append(ArrayList *al,void *val);
 */
 void AL_free(ArrayList *al);
 
+
+#ifdef __cplusplus 
+}
+#endif
 #endif

@@ -1,6 +1,11 @@
 #ifndef HASHTABLE_H
 #define HASHTABLE_H
 
+#ifdef __cplusplus 
+extern "C" {
+#endif
+
+
 #define HASH_FUNC_EXAMPLE &example_hash
 #define HASH_FUNC_EXAMPLE_SIZE 1000
 
@@ -64,4 +69,7 @@ int Hash_free_int(void *entry);
 
 #define HashTable_int_init() HashTable_init(HASH_FUNC_EXAMPLE_SIZE , &example_hash, &Hash_free_int, &Hash_comp_int)
 
+#ifdef __cplusplus 
+}
+#endif
 #endif

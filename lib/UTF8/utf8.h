@@ -4,6 +4,9 @@
 #ifndef UTF8_H
 #define UTF8 1
 
+#ifdef __cplusplus 
+extern "C" {
+#endif
 /*
  * returns length string if unicode chars are counted as one
 */
@@ -20,4 +23,7 @@ char *utf8_encode(int val);
 */
 long utf8_decode(char *p);
 
+#ifdef __cplusplus 
+}
+#endif
 #endif
